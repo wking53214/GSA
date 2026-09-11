@@ -1,0 +1,31 @@
+groups:
+  - name: gsa-gateway
+    rules:
+      - alert: GSACircuitOpen
+        expr: gsa_circuit_state == 2
+        for: 30s
+        labels: {severity: critical}
+        annotations:
+          summary: "GSA upstream circuit breaker is OPEN"
+          description: "The gateway has been fast-failing upstream calls for >30s."
+      - alert: GSAHealthRegressive
+        expr: gsa_health_composite_risk > 0.8
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "GSA operational health is regressive"
+          description: "Composite health-risk has been >0.8 for 2m (CASCADING/STRESSED regime)."
+      - alert: GSAFDRDrift
+        expr: gsa_observed_fdr > 0.10
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "GSA false-discovery rate above target"
+          description: "Blocks are >10% false alarms for 10m; the gate may be over-blocking."
+      - alert: GSARateLimitingHot
+        expr: rate(gsa_rate_limited_total[5m]) > 5
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Sustained per-tenant rate limiting"
+          description: "More than 5 throttles/sec over 5m; a tenant may need a quota change."
