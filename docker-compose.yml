@@ -1,0 +1,35 @@
+services:
+  gateway:
+    build: .
+    image: gsa-gateway:3.1.0
+    ports:
+      - "8000:8000"
+    environment:
+      GSA_ENV: staging
+      GSA_AUDIT_BACKEND: sqlite
+      GSA_AUDIT_DB_PATH: /data/gsa_audit.db
+      GSA_SECRET_KEY: ${GSA_SECRET_KEY:?set GSA_SECRET_KEY in your environment or .env}
+      GSA_JWT_PUBLIC_KEY_PATH: ${GSA_JWT_PUBLIC_KEY_PATH:-}
+      GSA_RATE_LIMIT_CAPACITY: "60"
+      GSA_RATE_LIMIT_REFILL_PER_SEC: "10"
+    volumes:
+      - gsa-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+    depends_on:
+      - gateway
+
+volumes:
+  gsa-data:
