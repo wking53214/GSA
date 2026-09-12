@@ -116,7 +116,7 @@ DIMENSIONS = [
             "ground-truth path for adaptive learning."),
         "gaps": [
             "URE thresholds + FDR target are tuned for synthetic loads; should be re-calibrated on real customer traffic patterns post-deploy",
-            "Adaptive state is per-instance; no OpenTelemetry spans or shipped Grafana dashboards/alert rules",
+            "Adaptive state is per-instance; no OpenTelemetry spans (alert rules and a Grafana dashboard now ship, unvalidated against live instances)",
         ],
         "ready_for": "Production as-is; threshold tuning is an operator responsibility once live traffic is observed.",
     },
@@ -161,11 +161,14 @@ DIMENSIONS = [
             "a GitHub Actions CI pipeline (lint, pytest, self-test, image build) + an operational RUNBOOK.md "
             "(deploy, scale, incident response, rollback, backup)."),
         "gaps": [
-            "No k8s manifests / Helm chart / Terraform (compose only)",
+            "k8s manifests now shipped (k8s/) but not yet applied against a live cluster",
+            "Grafana dashboard now shipped (grafana/) but not yet loaded into a live Grafana",
+            "No Helm chart / Terraform; manifests are plain YAML",
+            "Manifests pin replicas=1 on purpose: audit store, rate limiter, circuit breaker "
+            "and FDR controller are all per-process state, so scaling out needs a shared backend first",
             "Image build not yet validated in this environment (no Docker available here); CI builds it",
-            "No shipped Grafana dashboard JSON (alert rules only)",
         ],
-        "ready_for": "Container/compose production; add k8s manifests for orchestrated multi-replica.",
+        "ready_for": "Container/compose/single-replica k8s production; multi-replica needs shared cross-replica state.",
     },
 ]
 
