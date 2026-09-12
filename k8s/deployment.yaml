@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gsa-gateway
+  namespace: gsa
+spec:
+  # Deliberately 1. The audit store (SQLite on a ReadWriteOnce PVC), the token
+  # bucket rate limiter, the circuit breaker and the FDR threshold controller
+  # are all per-process state. Scaling out gives each replica its own private
+  # ledger and its own threshold, so a tenant's rate limit becomes N times the
+  # configured value and the adaptive controller learns from a fraction of the
+  # feedback. Multi-replica needs a shared backend first -- see the scorecard's
+  # "shared cross-replica state" line.
+  replicas: 1
+  strategy:
+    type: Recreate          # RWO volume: the old pod must release it first
+  selector:
+    matchLabels:
+      app: gsa-gateway
+  template:
+    metadata:
+      labels:
+        app: gsa-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        # Enforced at the pod level so a rebuilt image that drops the
+        # Dockerfile's USER directive still cannot start as root.
+        runAsNonRoot: true
+        runAsUser: 10001     # matches the Dockerfile's `useradd -u 10001 gsa`
+        runAsGroup: 10001
+        fsGroup: 10001       # so the mounted PVC is writable by that uid
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gateway
+          image: gsa-gateway:3.1.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: GSA_ENV
+              value: "prod"          # prod refuses unsigned tokens
+            - name: GSA_LOG_LEVEL
+              value: "INFO"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: GSA_AUDIT_BACKEND
+              value: "sqlite"
+            - name: GSA_AUDIT_DB_PATH
+              value: "/data/gsa_audit.db"
+            - name: GSA_JWT_PUBLIC_KEY_PATH
+              value: "/var/run/secrets/gsa/jwt-public-key"
+            - name: GSA_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gsa-secrets
+                  key: hmac-key
+            # Operational knobs. Defaults live in config.py; these are set
+            # explicitly so the deployed posture is visible in the manifest
+            # rather than implied by the image.
+            - name: GSA_RISK_BLOCK_THRESHOLD
+              value: "0.80"
+            - name: GSA_FDR_TARGET
+              value: "0.05"
+            - name: GSA_RATE_LIMIT_CAPACITY
+              value: "60"
+            - name: GSA_RATE_LIMIT_REFILL_PER_SEC
+              value: "10.0"
+            - name: GSA_MAX_REQUEST_CHARS
+              value: "8000"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: audit
+              mountPath: /data
+            - name: jwt
+              mountPath: /var/run/secrets/gsa
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp     # readOnlyRootFilesystem needs a writable /tmp
+      volumes:
+        - name: audit
+          persistentVolumeClaim:
+            claimName: gsa-audit-pvc
+        - name: jwt
+          secret:
+            secretName: gsa-secrets
+            items:
+              - key: jwt-public-key
+                path: jwt-public-key
+        - name: tmp
+          emptyDir: {}

@@ -221,14 +221,27 @@ docker compose up --build
 
 Starts gateway on :8000, Prometheus on :9090.
 
-### Production (k8s/container orchestration)
+### Kubernetes
 
-1. Build image: `docker build -t gsa-gateway:3.1.0 .`
-2. Provision secrets (HMAC key, JWT public key)
-3. Mount `/data` volume (audit store)
-4. Set `GSA_ENV=prod`, `GSA_AUDIT_BACKEND=sqlite`
-5. Wire `/metrics` to Prometheus
-6. Load `alerts.yml` for operational alerts
+Manifests are in `k8s/`. They have not been applied against a live cluster.
+
+```bash
+docker build -t gsa-gateway:3.1.0 .
+kubectl apply -f k8s/namespace.yaml
+# create the real secret from k8s/secret.yaml.example -- do not commit a filled-in copy
+kubectl apply -f k8s/pvc.yaml -f k8s/deployment.yaml -f k8s/service.yaml
+```
+
+The Deployment pins `replicas: 1` deliberately. The audit store, rate limiter, circuit
+breaker and FDR threshold controller are all per-process state, so a second replica gets
+its own private ledger and its own threshold, and a tenant's effective rate limit doubles.
+Multi-replica needs a shared backend first.
+
+### Observability
+
+Load `alerts.yml` into Prometheus and import `grafana/gsa_gateway_dashboard.json` into
+Grafana. The dashboard covers all 12 exported metrics, and its panel thresholds match the
+alert rules so a red panel and a firing alert mean the same thing.
 
 See `RUNBOOK.md` for full operational guide: deploy, scale, incident response, rollback, backup.
 
@@ -284,6 +297,7 @@ GitHub Actions pipeline included (`.github/workflows/ci.yml`):
 
 ## Documentation
 
+- **PROVENANCE.md** — what was recovered, from where, how it was verified, what is missing
 - **PRODUCTION_READINESS.md** — full scorecard, dimension by dimension
 - **REALITY_CHECK.md** — first contact with real jailbreak data
 - **RUNBOOK.md** — deploy, scale, incidents, rollback, backup
@@ -293,8 +307,9 @@ GitHub Actions pipeline included (`.github/workflows/ci.yml`):
 
 ## License
 
-No license file was present in the archived source. Licensing is unresolved — see
-`PROVENANCE.md`.
+None. No license file was present in the archived source and none has been added, so the
+default applies: all rights reserved. Fine for a private repository; needs an explicit
+decision before this is shared with anyone. See `PROVENANCE.md`.
 
 ---
 

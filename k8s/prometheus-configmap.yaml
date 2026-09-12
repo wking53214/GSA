@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-gsa
+  namespace: gsa
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    rule_files:
+      - /etc/prometheus/alerts.yml
+    scrape_configs:
+      - job_name: gsa-gateway
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["gsa-gateway:80"]
+            labels:
+              namespace: gsa
+  alerts.yml: |
+    groups:
+      - name: gsa_gateway
+        interval: 30s
+        rules:
+          - alert: GSACircuitOpen
+            expr: gsa_circuit_state == 2
+            for: 30s
+            labels:
+              severity: critical
+            annotations:
+              summary: "GSA circuit breaker OPEN"
+              description: "{{ $labels.instance }} has tripped its circuit breaker. Upstream may be failing."
+          - alert: GSAHealthRegressive
+            expr: gsa_health_composite_risk > 0.8
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: "GSA health regressive or STRESSED"
+              description: "{{ $labels.instance }} reports high risk ({{ $value }}). Check /health and traces."
+          - alert: GSAFDRDrift
+            expr: gsa_observed_fdr > 0.10
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "GSA FDR over-blocking"
+              description: "{{ $labels.instance }} observed FDR {{ $value }}, over 0.10 threshold. Policy may be too strict."
+          - alert: GSARateLimitingActive
+            expr: rate(gsa_rate_limited_total[1m]) > 0
+            for: 5m
+            labels:
+              severity: info
+            annotations:
+              summary: "GSA rate limiting active"
+              description: "{{ $labels.instance }} has rate-limited {{ $value }} req/s in the last minute."

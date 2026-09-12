@@ -1,4 +1,16 @@
 """
+SUPERSEDED. Kept for lineage only.
+
+This is the earlier snapshot of the same nine-dimension scorecard, scoring
+7.19/10. `GSA_SCORECARD.py` in the repository root is the later run of the
+identical dimension set at 8.17/10 and is the live artifact. Both were
+recovered from the same build session; they are consecutive states of one
+document, not two different assessments.
+
+Original module docstring follows.
+"""
+
+"""
 GSA UNIVERSAL GOVERNANCE CONTROL PLANE — PRODUCTION READINESS SCORECARD
 ======================================================================
 Reframed model (supersedes the earlier clinical/NCH-targeted scorecard):

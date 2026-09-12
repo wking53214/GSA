@@ -1,0 +1,20 @@
+# Audit store volume. GSA_AUDIT_BACKEND=sqlite writes the append-only ledger to
+# GSA_AUDIT_DB_PATH (/data/gsa_audit.db), which must survive pod restarts --
+# test_hardening.py::test_sqlite_store_and_chain_survive_restart is the test
+# that asserts the hash chain still verifies after a restart.
+#
+# ReadWriteOnce means this does NOT support multi-replica. Running replicas > 1
+# against SQLite gives each pod its own private ledger. Multi-replica needs a
+# shared backend (Postgres), which the scorecard lists as remaining work.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gsa-audit-pvc
+  namespace: gsa
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard

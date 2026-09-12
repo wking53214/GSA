@@ -71,11 +71,14 @@ they were replayed.
 2. Exact string matching first; where an edit's anchor text had drifted, fell back to
    matching on the first and last non-blank lines of the target block with an 0.80
    similarity floor.
-3. **91 of 95 edits applied.** Of the 4 that did not:
-   - 2 were already no-ops — a later whole-file rewrite had already produced the intended
-     end state (`HealthReport` removal; the `ATTACKED` regime trigger condition).
-   - 2 were cosmetic prose edits to scorecard rationale strings. Not applied; scorecard
-     numerics are unaffected.
+3. **91 of 95 edits applied, and all 4 misses were verified to be no-ops.** Each was
+   superseded by a later whole-file rewrite that had already produced the intended end
+   state: the `HealthReport` removal, the `ATTACKED` regime trigger condition, the URE
+   calibration rationale in `GSA_SCORECARD.py` (already at 9/10 with the calibrated text),
+   and the error-handling rationale in the earlier scorecard (whose dimension set was
+   replaced wholesale). **No edit is outstanding.** An earlier version of this file claimed
+   two cosmetic edits were still missing; that was wrong, and checking each anchor against
+   the reconstructed files is what disproved it.
 4. Backup-copy (`cp`) operations were deliberately **not** replayed. Replaying them restored
    stale snapshots over newer state and regressed the reconstruction from 4 failures to 15.
 
@@ -107,9 +110,13 @@ policy quality correctly, and that the gap is policy work, not architecture work
 - **No LICENSE.** None existed in the archived source. Licensing is unresolved.
 - **`archive/gsa_core_framework_v85.py` is partial** (93 lines). The full "GSA Core Framework
   v8.5" text was pasted into the session but only the excerpt written to disk survives as code.
-- **Two scorecard rationale strings** carry pre-update wording (see Recovery method, step 3).
-- **`k8s/` manifests, Helm chart, and Grafana dashboard JSON** are absent. They were never
-  built; the scorecard lists them as the remaining path from 8.17 to 8.5.
+- **No Helm chart or Terraform.** `k8s/` ships plain YAML manifests, added after the
+  reconstruction (see "Added after reconstruction" below). They have not been applied
+  against a live cluster.
+- **Multi-replica is not supported.** The audit store, rate limiter, circuit breaker and FDR
+  threshold controller are all per-process state, so the k8s manifests pin `replicas: 1` on
+  purpose. Scaling out requires a shared backend, which the scorecard lists as the main
+  remaining work toward 8.5.
 - **Original commit history is unrecoverable.** The archive records two commits in the
   build session's staging directory but not their contents as distinct trees.
 
@@ -126,3 +133,35 @@ policy quality correctly, and that the gap is policy work, not architecture work
 | `gsa_kernel_v3_initial.py` | First working kernel from the 2026-06-19 session |
 | `gsa_kernel_v3_hardened.py` | Same kernel after the hardening pass, with `# FIX:` markers inline |
 | `gsa_core_framework_v85.py` | Excerpt of the v8.5 framework (CITADEL/DIT severity ladder, persistence layer) |
+| `PRODUCTION_READINESS_SCORECARD_7.19.py` | Earlier state of the live scorecard, same nine dimensions at 7.19/10 |
+
+
+---
+
+## Added after reconstruction
+
+Everything above this section came out of the archives. The following did not, and is
+marked separately so the reconstruction stays auditable:
+
+| Path | What it is |
+|---|---|
+| `k8s/` | Deployment, Service, PVC, Namespace and a Secret template for the gateway. Structure and security posture (non-root pod context, dropped capabilities, read-only root filesystem, seccomp) follow the manifests in the descendant `GSA-815` repo; the workload, ports, probes and environment are GSA's own, taken from `Dockerfile` and `config.py`. Valid YAML, never applied to a cluster |
+| `grafana/gsa_gateway_dashboard.json` | 16 panels over all 12 Prometheus metrics the gateway actually exports. Panel thresholds match `alerts.yml`. Valid JSON, never loaded into a live Grafana |
+
+Two scorecard edits accompany them, both narrowing claims rather than raising scores:
+the `Deployment & Operations` and `Operational Health` gap lists now say these artifacts
+exist but are unvalidated. **The 8.17/10 total is unchanged.** Shipping a manifest is not
+the same as proving it runs, and the score should not move until it does.
+
+`PRODUCTION_READINESS_SCORECARD.py` was moved to `archive/PRODUCTION_READINESS_SCORECARD_7.19.py`.
+It scored the identical nine dimensions at 7.19/10 and is an earlier state of the same
+document as `GSA_SCORECARD.py`, not a competing assessment. Two disagreeing scorecards in
+the repository root was a reconstruction artifact, not a historical fact.
+
+## Open decision: licensing
+
+No LICENSE file existed in the archived source, and none has been added here. Without one,
+the default applies: all rights reserved, and nobody may use, copy, or modify this code.
+That may be exactly what you want for a private repository. If GSA is ever shared, shown to
+a customer, or submitted to a bug-bounty program, it needs an explicit license, and that is
+an owner's decision rather than something a reconstruction should assume.
