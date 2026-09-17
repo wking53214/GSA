@@ -1,0 +1,130 @@
+{
+  "canonical_repo": "wking53214/GSA",
+  "empty_repos_no_content_to_merge": [
+    "wking53214/GSA-2",
+    "wking53214/GSA-GATEWAY1"
+  ],
+  "excluded_as_byte_identical": [
+    {
+      "identical_to": "archive/GSA_Governance_Operating_Core_test_harness.py",
+      "sha256": "06be02a83e62eff87b927fef88a125645642dfb2e578f2b123ccc32818a70c2d",
+      "source": "wking53214/gsa-governance-core/test_harness.py"
+    }
+  ],
+  "sources": {
+    "wking53214/gsa-governance-core": {
+      "files": [
+        {
+          "path": ".gitignore",
+          "sha256": "862263fa1f46c20f0d1e4dac5ffcc75abd55c08211b2c3864c5f8764b9d87793"
+        },
+        {
+          "path": "GSA_Governance_Operating_Core_Enterprise.py",
+          "sha256": "ddba6164ca2d3e9b83073935f6d54501221e2c79b06b0fba2e7cd89264646061"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        {
+          "path": "PROVENANCE.md",
+          "sha256": "53a0c0266a45ab626b34757cb29490dd1ef5c5da07a4536382d4970e9e828efd"
+        },
+        {
+          "path": "README.md",
+          "sha256": "5136338369233010f3be83e7e882500a3f1d9de1ebe20e9b40353fbe27072747"
+        },
+        {
+          "path": "test_harness.py",
+          "sha256": "06be02a83e62eff87b927fef88a125645642dfb2e578f2b123ccc32818a70c2d"
+        }
+      ],
+      "source_head": "ff6a883d77fcd9f7786a087cfbea43b5a24699e6"
+    },
+    "wking53214/gsa-master-kernel": {
+      "files": [
+        {
+          "path": ".ghost_archive",
+          "sha256": "5435fa954fd763edc749ad4683f9da99394897d5ea7b334fa1e1e3c8a44d939d"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "128befb99f1df42a5827ecb70bca08895c4add2d72e99b2f740b07bc5cdeb28c"
+        },
+        {
+          "path": "PROVENANCE.md",
+          "sha256": "1c376004033085099f0b434bf9c64f56806e95feda763cd908a46225dfce1e1a"
+        },
+        {
+          "path": "README.md",
+          "sha256": "1ea2cbc1f093a81a700a577db76c8e0200b49a6cf733e0361c73cba1ce32f814"
+        },
+        {
+          "path": "TRANSCRIPT.md",
+          "sha256": "4aa0cf2a6685d648aeafc3718494afc7b9187e7cf67fe76e03e81ff48514527b"
+        },
+        {
+          "path": "artifact_1.py",
+          "sha256": "81dad9a69062affee99b73179e9f34181bdb11ace31bece72a4a5f647bb10268"
+        },
+        {
+          "path": "artifact_10.py",
+          "sha256": "343fa9af850f9537c14443bf0a79a5801d36f561005b0cf11cfdc4791a4bef1d"
+        },
+        {
+          "path": "artifact_11.py",
+          "sha256": "dce438ed7e9555df04c79e8c8cf7dd94a5bc032c997ccf241383c27a5f879f3f"
+        },
+        {
+          "path": "artifact_12.py",
+          "sha256": "7f9d5c16f793800b68fbc9afab44a0f28d0137f94866b1a0049a6a2185ce80a2"
+        },
+        {
+          "path": "artifact_13.py",
+          "sha256": "30dfb2e6906d6d7158464c7e7417580144e52af44bebe01f5406a070d26029ce"
+        },
+        {
+          "path": "artifact_14.py",
+          "sha256": "a7026823c9a985cb7ff3d90a24a832fbc51cfb3ff2c922d61c52296808dbaa04"
+        },
+        {
+          "path": "artifact_15.py",
+          "sha256": "4e9e8bcdd0a1ada85331e4ea50930aef4b6b42e778ecd60fd02e52478265cd7c"
+        },
+        {
+          "path": "artifact_2.py",
+          "sha256": "c2d0a451e04244789ca554e6ce173767546670910bf098ce6e570ad4a2a825ee"
+        },
+        {
+          "path": "artifact_3.py",
+          "sha256": "b4f33860737194da62659b3a462473d71686a3776839230cec400666782881ea"
+        },
+        {
+          "path": "artifact_4.py",
+          "sha256": "049a57ca9a843afedcb8064cdd37a43d8f3cf9ac4bb62870837fc14058dc2c49"
+        },
+        {
+          "path": "artifact_5.py",
+          "sha256": "e8dd2fc69f8b42bdafaf177f5b5c38c9ad48654aa05998e05b1208531a3bd4bc"
+        },
+        {
+          "path": "artifact_6.py",
+          "sha256": "60c7dd462fc7ea79bb169f332a5c734ae9a9c601e586b700b83c7bd2a0067dbd"
+        },
+        {
+          "path": "artifact_7.py",
+          "sha256": "94d9e02b113439f7b077906861199c902b2a81aad2787de942c4ccb48f930d8d"
+        },
+        {
+          "path": "artifact_8.py",
+          "sha256": "9c517081d355ff58d45fabcc51f4645d92fd149f17af91da552069679f8bc5a5"
+        },
+        {
+          "path": "artifact_9.py",
+          "sha256": "e00da6b6caa7fa86367062594bc7ff927206f46a70ed6f9e66090ba0253c4367"
+        }
+      ],
+      "source_head": "8030006bb68af8350a7082d6cac79f99a1dd11d6"
+    }
+  }
+}
