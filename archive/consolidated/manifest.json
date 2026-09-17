@@ -11,6 +11,22 @@
       "source": "wking53214/gsa-governance-core/test_harness.py"
     }
   ],
+  "recovered_originals": {
+    "no_recovery_attempted": [
+      "artifact_7.py"
+    ],
+    "note": "Repairs of newline-stripped artifacts. Originals retained unmodified alongside them.",
+    "parses": [
+      "artifact_5.recovered.py",
+      "artifact_9.recovered.py",
+      "artifact_14.recovered.py"
+    ],
+    "source_branch_merged": "claude/recovered-originals",
+    "still_unparseable": [
+      "artifact_1.recovered.py",
+      "artifact_3.recovered.py"
+    ]
+  },
   "sources": {
     "wking53214/gsa-governance-core": {
       "files": [
@@ -68,6 +84,10 @@
           "sha256": "81dad9a69062affee99b73179e9f34181bdb11ace31bece72a4a5f647bb10268"
         },
         {
+          "path": "artifact_1.recovered.py",
+          "sha256": "1115bdfae6937817d29ee0454ef633d8fc4cad1915c23a864b223852c805d545"
+        },
+        {
           "path": "artifact_10.py",
           "sha256": "343fa9af850f9537c14443bf0a79a5801d36f561005b0cf11cfdc4791a4bef1d"
         },
@@ -88,6 +108,10 @@
           "sha256": "a7026823c9a985cb7ff3d90a24a832fbc51cfb3ff2c922d61c52296808dbaa04"
         },
         {
+          "path": "artifact_14.recovered.py",
+          "sha256": "84450c844762004ed4a825a15e39d8da22764c139e954f78e9936f268c313a92"
+        },
+        {
           "path": "artifact_15.py",
           "sha256": "4e9e8bcdd0a1ada85331e4ea50930aef4b6b42e778ecd60fd02e52478265cd7c"
         },
@@ -100,12 +124,20 @@
           "sha256": "b4f33860737194da62659b3a462473d71686a3776839230cec400666782881ea"
         },
         {
+          "path": "artifact_3.recovered.py",
+          "sha256": "884de4cc5e6aae2d8249e8e58355569e8112010a01ceb308aacc31f6b4b48652"
+        },
+        {
           "path": "artifact_4.py",
           "sha256": "049a57ca9a843afedcb8064cdd37a43d8f3cf9ac4bb62870837fc14058dc2c49"
         },
         {
           "path": "artifact_5.py",
           "sha256": "e8dd2fc69f8b42bdafaf177f5b5c38c9ad48654aa05998e05b1208531a3bd4bc"
+        },
+        {
+          "path": "artifact_5.recovered.py",
+          "sha256": "443c602c846af9f16f86e8f59a8dd7fd1dde660cef91c839992dba7d86776b18"
         },
         {
           "path": "artifact_6.py",
@@ -122,9 +154,14 @@
         {
           "path": "artifact_9.py",
           "sha256": "e00da6b6caa7fa86367062594bc7ff927206f46a70ed6f9e66090ba0253c4367"
+        },
+        {
+          "path": "artifact_9.recovered.py",
+          "sha256": "e5a61e2afcdb5c98867ffafdf508b19b47f3a314940a9b97f1d669bda2056feb"
         }
       ],
-      "source_head": "8030006bb68af8350a7082d6cac79f99a1dd11d6"
+      "previous_source_head": "8030006bb68af8350a7082d6cac79f99a1dd11d6",
+      "source_head": "c0cba89232c8b20e9133a89ef1007dc3a53efcb3"
     }
   }
 }

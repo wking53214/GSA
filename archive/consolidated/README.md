@@ -103,6 +103,32 @@ once repaired.
 
 The other nine parse cleanly.
 
+### Recovered versions
+
+`GSA-Master-Kernel` later gained repairs for five of those six, merged there
+from `claude/recovered-originals`. They are carried here as `*.recovered.py`
+**alongside the untouched originals**, so the damage remains inspectable and
+the repair is available:
+
+| File | Lines | Parses | Symbols recovered |
+| --- | ---: | :---: | --- |
+| `artifact_14.recovered.py` | 214 | yes | `GraphExtractor`, `Node`, `Edge`, `Graph`, `extract_graph` |
+| `artifact_9.recovered.py` | 220 | yes | `DeterministicPolicyRuntime`, `PolicyResult`, `Telemetry`, `ExecutionResult` |
+| `artifact_5.recovered.py` | 30 | yes | `evaluate_environment` |
+| `artifact_3.recovered.py` | 189 | no | - |
+| `artifact_1.recovered.py` | 428 | no | - |
+
+Three of five are restored to working Python, verified by parsing each and
+extracting its symbol table. The two that still fail are the hardest cases:
+`artifact_1` holds several components concatenated behind `SYSTEM ...
+Component:` separators, so it is not one module even once re-indented.
+
+`artifact_7.py` has no recovered counterpart. At 117 bytes it is a bare list
+of names, with nothing to reconstruct.
+
+`manifest.json` records the source HEAD this content came from, and the
+previous HEAD it superseded, under `previous_source_head`.
+
 ## Verifying this consolidation
 
 `manifest.json` records every source file with its SHA-256 and the source
