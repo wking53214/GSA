@@ -73,7 +73,7 @@ class Settings:
     jwt_tenant_claim: str = field(default_factory=lambda: _env("GSA_JWT_TENANT_CLAIM", "tenant_id"))
 
     # --- persistence ---
-    # audit_backend: memory | sqlite ; DB url for sqlite/postgres-style DSN
+    # audit_backend: memory | sqlite (anything else is rejected). prod requires sqlite.
     audit_backend: str = field(default_factory=lambda: _env("GSA_AUDIT_BACKEND", "memory"))
     audit_db_path: str = field(default_factory=lambda: _env("GSA_AUDIT_DB_PATH", "gsa_audit.db"))
 

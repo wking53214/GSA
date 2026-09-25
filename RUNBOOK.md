@@ -15,7 +15,7 @@ reads them at startup via `config.py`. Key ones:
 | `GSA_SECRET_KEY` | HMAC attestation signing key | **required**, from a secret manager |
 | `GSA_JWT_PUBLIC_KEY_PATH` | RS256 public key (PEM) | **required** for real auth |
 | `GSA_JWT_ISSUER` / `GSA_JWT_AUDIENCE` | JWT validation | set to your IdP values |
-| `GSA_AUDIT_BACKEND` | `memory`/`sqlite` | `sqlite` (or Postgres DSN) |
+| `GSA_AUDIT_BACKEND` | `memory`/`sqlite`; any other value is rejected | `sqlite` (required when `GSA_ENV=prod`) |
 | `GSA_AUDIT_DB_PATH` | audit DB file | on a persistent volume |
 | `GSA_RATE_LIMIT_*` | per-tenant token bucket | tune to plan tiers |
 
@@ -32,7 +32,7 @@ docker compose up --build
 
 ### Production (container platform / k8s)
 1. Provision the HMAC key and JWT public key in your secret manager; mount them.
-2. Set `GSA_ENV=prod`, `GSA_AUDIT_BACKEND=sqlite` (or Postgres), volume for `/data`.
+2. Set `GSA_ENV=prod`, `GSA_AUDIT_BACKEND=sqlite`, volume for `/data`.
 3. Deploy the image; wire `/metrics` into Prometheus (see `prometheus.yml`) and load
    `alerts.yml`.
 4. Verify readiness: `GET /health` → `{"status":"ok", ...}`; `GET /api/version`.
@@ -76,8 +76,9 @@ docker compose up --build
 - The gateway is stateless **except** for per-instance adaptive state (circuit
   breaker, rate-limit buckets, FDR window, trajectory history) and the audit store.
 - Horizontal scale today: run N replicas behind a load balancer with **sticky-free**
-  routing for stateless request handling; point all replicas at a **shared audit
-  store** (Postgres) so the ledger/traces are unified.
+  routing for stateless request handling. The only persistent backend today is
+  SQLite, which is per-instance: a **shared audit store** (e.g. Postgres) so the
+  ledger/traces are unified across replicas is not implemented yet.
 - Known limitation: rate limiting and FDR state are per-instance. For exact global
   quotas/threshold-sharing across replicas, move those to a shared store (e.g. Redis)
   — tracked as a follow-up.
@@ -105,5 +106,5 @@ docker compose up --build
 
 - Back up the audit DB volume (`/data`) on your standard schedule. The chain is
   hash-linked, so integrity is verifiable after restore via the genesis-to-tip walk.
-- For Postgres, use standard WAL-based backups; the schema is two append-only tables
-  (`audit_chain`, `traces`).
+- The schema is two append-only tables (`audit_chain`, `traces`). A Postgres
+  backend is not implemented; SQLite is the only persistent option.
