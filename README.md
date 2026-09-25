@@ -102,7 +102,7 @@ Policy owns: what is risky, what output is acceptable.
 2. **Block or Pass** — hard-blocks bypass threshold; graded blocks respect it
 3. **Generator** — if passed, run the LLM (with circuit-breaker protection)
 4. **Output → ResponsePipeline** (inspect_output) — policy validates output; correct loop if needed
-5. **Audit** — hash-linked chain, deterministic attestation, persistent (SQLite/Postgres)
+5. **Audit** — hash-linked chain, deterministic attestation, persistent (SQLite; Postgres is not implemented)
 6. **Health** — URE regime engine (6 regimes, Lyapunov energy, properly calibrated)
 7. **Feedback** — ground-truth labels move the adaptive threshold (FDR control)
 
