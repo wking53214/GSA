@@ -307,9 +307,9 @@ GitHub Actions pipeline included (`.github/workflows/ci.yml`):
 
 ## License
 
-None. No license file was present in the archived source and none has been added, so the
-default applies: all rights reserved. Fine for a private repository; needs an explicit
-decision before this is shared with anyone. See `PROVENANCE.md`.
+Proprietary. Copyright (c) 2026 William King. All rights reserved. See `LICENSE`. This is a
+private repository and no license is granted to anyone else; any sharing needs an explicit
+owner decision first. See `PROVENANCE.md`.
 
 ---
 
