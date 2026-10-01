@@ -68,11 +68,9 @@ Gemini-transcript artifacts. Those remain where they are:
 
 ## License
 
-Apache-2.0 (`LICENSE`), matching `GSA-815` and `GSA-Master-Kernel`. Inside
-GSA-815, `gsa-governance-core/README.md` closed with "License: Proprietary /
-Internal use unless otherwise specified by the architecture owner" — GSA-815
-itself, like GSA-Master-Kernel, ships an Apache-2.0 `LICENSE` at its repo
-root, so that line described narrower intent for this one module without a
-matching license file ever having been added for it specifically. This
-repository resolves that by using the same Apache-2.0 license as both of its
-source repositories.
+Proprietary, all rights reserved (`LICENSE`). Inside GSA-815,
+`gsa-governance-core/README.md` closed with "License: Proprietary / Internal use
+unless otherwise specified by the architecture owner", which described this
+module's intent without a matching license file. This repository now carries
+an all-rights-reserved `LICENSE`, which replaced an Apache-2.0 text that was
+present earlier.

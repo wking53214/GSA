@@ -107,7 +107,7 @@ policy quality correctly, and that the gap is policy work, not architecture work
 
 ## Known gaps
 
-- **License.** None existed in the archived source. A proprietary all-rights-reserved `LICENSE` (William King, 2026) was added afterward; any wider license is an owner decision.
+- **License.** None existed in the archived source. A proprietary all-rights-reserved `LICENSE` (William N. King, 2026) was added afterward; any wider license is an owner decision.
 - **`archive/gsa_core_framework_v85.py` is partial** (93 lines). The full "GSA Core Framework
   v8.5" text was pasted into the session but only the excerpt written to disk survives as code.
 - **No Helm chart or Terraform.** `k8s/` ships plain YAML manifests, added after the
@@ -161,7 +161,7 @@ the repository root was a reconstruction artifact, not a historical fact.
 ## Open decision: licensing
 
 No LICENSE file existed in the archived source. A proprietary all-rights-reserved `LICENSE`
-(William King, 2026) has since been added, so nobody else may use, copy, or modify this code.
+(William N. King, 2026) has since been added, so nobody else may use, copy, or modify this code.
 That may be exactly what you want for a private repository. If GSA is ever shared, shown to
 a customer, or submitted to a bug-bounty program, it needs an explicit license, and that is
 an owner's decision rather than something a reconstruction should assume.

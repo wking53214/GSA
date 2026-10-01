@@ -307,7 +307,7 @@ GitHub Actions pipeline included (`.github/workflows/ci.yml`):
 
 ## License
 
-Proprietary. Copyright (c) 2026 William King. All rights reserved. See `LICENSE`. This is a
+Proprietary. Copyright (c) 2026 William N. King. All rights reserved. See `LICENSE`. This is a
 private repository and no license is granted to anyone else; any sharing needs an explicit
 owner decision first. See `PROVENANCE.md`.
 

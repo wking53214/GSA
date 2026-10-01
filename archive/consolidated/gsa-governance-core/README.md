@@ -178,8 +178,6 @@ gsa-governance-core/
 
 ## License
 
-Apache-2.0 (`LICENSE`), matching the sibling repos this was recovered from
-(`GSA-815`, `GSA-Master-Kernel`). The README that shipped alongside this
-module inside `GSA-815` carried a "Proprietary / Internal use" line instead;
-see [PROVENANCE.md](PROVENANCE.md) for why this repository uses Apache-2.0
-going forward.
+Proprietary, all rights reserved (`LICENSE`). The README that shipped alongside
+this module inside `GSA-815` carried a "Proprietary / Internal use" line;
+see [PROVENANCE.md](PROVENANCE.md).

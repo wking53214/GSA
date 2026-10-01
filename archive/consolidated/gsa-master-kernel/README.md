@@ -30,5 +30,5 @@ transcript. Some of GSA-815's now-removed root files
 
 ## License
 
-Apache-2.0 (`LICENSE`). The transcript content is a preserved AI conversation;
+Proprietary, all rights reserved (`LICENSE`). The transcript content is a preserved AI conversation;
 the license covers this repository's arrangement of it.
