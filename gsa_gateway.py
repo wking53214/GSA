@@ -676,6 +676,9 @@ class Gateway:
         self.breaker = CircuitBreaker()
         self.rate_limiter = RateLimiter()
         self.pipeline = ResponsePipeline(self.attestation, self.breaker, self.policy)
+        if store is None and settings.env == "prod" and settings.audit_backend == "memory":
+            # prod keeps the audit chain; an in-memory store loses it on restart
+            raise RuntimeError("GSA_ENV=prod requires GSA_AUDIT_BACKEND=sqlite")
         self.store = store if store is not None else make_store(settings.audit_backend, settings.audit_db_path)
         self.ledger = AuditLedger(self.store)
         self.health_engine = GatewayHealthEngine(backlog_capacity=ATTESTATION_QUEUE_SIZE)  # URE regime engine
