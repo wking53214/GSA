@@ -122,9 +122,16 @@ class SqliteAuditStore(AuditStore):
 
 
 def make_store(backend: str, db_path: str = "gsa_audit.db") -> AuditStore:
+    # An unknown backend used to fall through to MemoryAuditStore, so a typo
+    # or an unimplemented choice (e.g. a Postgres DSN) silently lost the audit
+    # chain on restart. Only the two implemented backends are accepted.
     if backend == "sqlite":
         return SqliteAuditStore(db_path)
-    return MemoryAuditStore()
+    if backend == "memory":
+        return MemoryAuditStore()
+    raise ValueError(
+        f"unsupported GSA_AUDIT_BACKEND {backend!r}: use 'sqlite' or 'memory'"
+    )
 
 
 if __name__ == "__main__":
