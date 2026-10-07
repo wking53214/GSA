@@ -107,7 +107,7 @@ policy quality correctly, and that the gap is policy work, not architecture work
 
 ## Known gaps
 
-- **No LICENSE.** None existed in the archived source. Licensing is unresolved.
+- **No LICENSE in the archived source.** Resolved 2026-10-07: licensed under Apache-2.0 (see `LICENSE`).
 - **`archive/gsa_core_framework_v85.py` is partial** (93 lines). The full "GSA Core Framework
   v8.5" text was pasted into the session but only the excerpt written to disk survives as code.
 - **No Helm chart or Terraform.** `k8s/` ships plain YAML manifests, added after the
@@ -158,7 +158,10 @@ It scored the identical nine dimensions at 7.19/10 and is an earlier state of th
 document as `GSA_SCORECARD.py`, not a competing assessment. Two disagreeing scorecards in
 the repository root was a reconstruction artifact, not a historical fact.
 
-## Open decision: licensing
+## Licensing (resolved 2026-10-07)
+
+> **Resolved.** The owner licensed GSA under the Apache License 2.0 (`LICENSE`, `NOTICE`).
+> The note below is kept as it was written.
 
 No LICENSE file existed in the archived source, and none has been added here. Without one,
 the default applies: all rights reserved, and nobody may use, copy, or modify this code.
