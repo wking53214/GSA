@@ -307,9 +307,7 @@ GitHub Actions pipeline included (`.github/workflows/ci.yml`):
 
 ## License
 
-None. No license file was present in the archived source and none has been added, so the
-default applies: all rights reserved. Fine for a private repository; needs an explicit
-decision before this is shared with anyone. See `PROVENANCE.md`.
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Copyright 2026 William N. King.
 
 ---
 
