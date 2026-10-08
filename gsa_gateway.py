@@ -74,6 +74,7 @@ logger = logging.getLogger("gsa_gateway")
 # Configuration  (operational knobs come from config.settings / the environment)
 # ----------------------------------------------------------------------------
 from config import settings  # 12-factor settings
+from backpressure import backpressure_delay_seconds  # queue delay signal
 
 MAX_REQUEST_CHARS: Final[int] = settings.max_request_chars
 RISK_BLOCK_THRESHOLD: Final[float] = settings.risk_block_threshold
@@ -314,13 +315,14 @@ class AttestationService:
         self._tasks = []
 
     def _backpressure(self) -> float:
-        q = self._queue.qsize()
         cap = self._queue.maxsize
-        if q > cap * 0.85:
-            return 0.002
-        if q > cap * 0.60:
-            return 0.001
-        return 0.0
+        if cap <= 0:
+            return 0.0  # unbounded queue: no occupancy to measure
+        return backpressure_delay_seconds(
+            depth=self._queue.qsize(),
+            capacity=cap,
+            max_delay_seconds=0.002,  # same ceiling as the old top step
+        )
 
     @staticmethod
     def _signing_base(payload: str, telemetry: Telemetry, signed_at: str, nonce: str) -> str:
