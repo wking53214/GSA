@@ -12,7 +12,7 @@ reads them at startup via `config.py`. Key ones:
 | Variable | Purpose | Prod requirement |
 |---|---|---|
 | `GSA_ENV` | `dev`/`staging`/`prod` | `prod` (refuses unsigned tokens) |
-| `GSA_SECRET_KEY` | HMAC attestation signing key | **required**, from a secret manager |
+| `GSA_SECRET_KEY` | HMAC attestation signing key | **required**, from a secret manager. Every profile except `dev` refuses to start without it; only `dev` falls back to a published default key, with a warning |
 | `GSA_JWT_PUBLIC_KEY_PATH` | RS256 public key (PEM) | **required** for real auth |
 | `GSA_JWT_ISSUER` / `GSA_JWT_AUDIENCE` | JWT validation | set to your IdP values |
 | `GSA_AUDIT_BACKEND` | `memory`/`sqlite`; any other value is rejected | `sqlite` (required when `GSA_ENV=prod`) |
