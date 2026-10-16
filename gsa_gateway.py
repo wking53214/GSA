@@ -120,10 +120,12 @@ def _utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _build_secret_provider():
-    if settings.secret_provider == "file" and os.environ.get("GSA_SECRET_FILE"):
-        return FileSecretProvider(os.environ["GSA_SECRET_FILE"], settings.jwt_public_key_path)
-    return EnvSecretProvider(settings.hmac_secret_env or "GSA_SECRET_KEY", settings.jwt_public_key_path)
+def _build_secret_provider(cfg=settings):
+    if cfg.secret_provider == "file" and os.environ.get("GSA_SECRET_FILE"):
+        return FileSecretProvider(os.environ["GSA_SECRET_FILE"], cfg.jwt_public_key_path)
+    # The development key is for local runs only. Every other profile (staging and prod included) must supply a key,
+    # and an unrecognised profile name is not "dev", so a typo cannot switch the guard off.
+    return EnvSecretProvider(cfg.hmac_secret_env, cfg.jwt_public_key_path, allow_dev_key=(cfg.env == "dev"))
 
 
 SECRETS = _build_secret_provider()
