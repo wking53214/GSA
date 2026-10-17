@@ -32,6 +32,13 @@ class AuthError(Exception):
     pass
 
 
+class MissingSecretError(AuthError):
+    """The HMAC attestation key is missing or empty, and no default key is allowed here."""
+
+
+_DEV_HMAC_KEY = b"dev-only-insecure-key-change-me"
+
+
 # ---------------------------------------------------------------------------
 # Secret providers
 # ---------------------------------------------------------------------------
@@ -43,16 +50,27 @@ class SecretProvider(ABC):
 
 
 class EnvSecretProvider(SecretProvider):
-    def __init__(self, hmac_env: str = "GSA_SECRET_KEY", jwt_public_key_path: str = "") -> None:
+    """Reads the HMAC key from the environment variable NAMED `hmac_env`.
+
+    A published default key signs nothing worth trusting, so it is used only when the caller says so
+    (`allow_dev_key=True`, for local runs). The default is to refuse: a missing key is an error, not a fallback.
+    """
+
+    def __init__(self, hmac_env: str = "GSA_SECRET_KEY", jwt_public_key_path: str = "",
+                 allow_dev_key: bool = False) -> None:
         self._hmac_env = hmac_env
         self._jwt_path = jwt_public_key_path
+        self._allow_dev_key = allow_dev_key
 
     def get_hmac_key(self) -> bytes:
         v = os.environ.get(self._hmac_env, "")
         if v:
             return v.encode("utf-8")
+        if not self._allow_dev_key:
+            raise MissingSecretError(
+                f"{self._hmac_env} is not set; refusing to sign attestations with a default key")
         logger.warning("HMAC secret not set — using an insecure development key. Do not run this in production.")
-        return b"dev-only-insecure-key-change-me"
+        return _DEV_HMAC_KEY
 
     def get_jwt_public_key(self) -> Optional[str]:
         if self._jwt_path and os.path.exists(self._jwt_path):
@@ -70,7 +88,10 @@ class FileSecretProvider(SecretProvider):
 
     def get_hmac_key(self) -> bytes:
         with open(self._hmac_path, "rb") as fh:
-            return fh.read().strip()
+            key = fh.read().strip()
+        if not key:
+            raise MissingSecretError(f"{self._hmac_path} is empty; an empty key signs nothing")
+        return key
 
     def get_jwt_public_key(self) -> Optional[str]:
         if self._jwt_path and os.path.exists(self._jwt_path):

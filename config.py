@@ -65,7 +65,9 @@ class Settings:
 
     # --- secrets / auth ---
     secret_provider: str = field(default_factory=lambda: _env("GSA_SECRET_PROVIDER", "env"))  # env|file
-    hmac_secret_env: str = field(default_factory=lambda: _env("GSA_SECRET_KEY", ""))
+    # The NAME of the environment variable that holds the HMAC attestation key. It is not the key.
+    # This used to hold the key's value, which the provider then looked up as a variable name.
+    hmac_secret_env: str = "GSA_SECRET_KEY"
     # JWT: when a public key is configured, bearer tokens are verified as RS256 JWTs.
     jwt_public_key_path: str = field(default_factory=lambda: _env("GSA_JWT_PUBLIC_KEY_PATH", ""))
     jwt_issuer: str = field(default_factory=lambda: _env("GSA_JWT_ISSUER", ""))
@@ -78,7 +80,7 @@ class Settings:
     audit_db_path: str = field(default_factory=lambda: _env("GSA_AUDIT_DB_PATH", "gsa_audit.db"))
 
     def summary(self) -> dict:
-        redacted = "<set>" if self.hmac_secret_env else "<unset>"
+        redacted = "<set>" if os.environ.get(self.hmac_secret_env) else "<unset>"
         return {
             "env": self.env, "audit_backend": self.audit_backend,
             "secret_provider": self.secret_provider, "hmac_secret": redacted,
