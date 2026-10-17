@@ -199,7 +199,7 @@ All operational knobs are environment variables (see `.env.example`):
 
 ```bash
 GSA_ENV=prod                          # dev|staging|prod (prod refuses unsigned tokens)
-GSA_SECRET_KEY=<your-hmac-key>        # from a secret manager
+GSA_SECRET_KEY=<your-hmac-key>        # from a secret manager; required unless GSA_ENV=dev (startup is refused without it)
 GSA_JWT_PUBLIC_KEY_PATH=/path/to/pub  # RS256 verification (required for prod)
 GSA_AUDIT_BACKEND=sqlite              # memory|sqlite
 GSA_AUDIT_DB_PATH=/data/gsa_audit.db  # persistent volume

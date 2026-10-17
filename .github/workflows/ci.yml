@@ -17,7 +17,7 @@ jobs:
       - name: Lint
         run: ruff check . || true
       - name: Test
-        run: pytest -q test_gsa_gateway.py test_policy_seam.py test_hardening.py
+        run: pytest -q test_gsa_gateway.py test_policy_seam.py test_hardening.py test_secret_key.py
       - name: Self-test + engine calibration
         run: |
           python gsa_gateway.py
