@@ -17,11 +17,29 @@ jobs:
       - name: Lint
         run: ruff check . || true
       - name: Test
-        run: pytest -q test_gsa_gateway.py test_policy_seam.py test_hardening.py test_secret_key.py
+        run: pytest -q test_gsa_gateway.py test_policy_seam.py test_hardening.py test_secret_key.py test_cns_connector.py test_cns_independence.py
       - name: Self-test + engine calibration
         run: |
           python gsa_gateway.py
           python ure_engine.py
+  cns:
+    # The optional CNS connector (gsa_cns_connector), with requirements-cns.txt installed. GSA_REQUIRE_CNS=1 turns a
+    # missing cns into a failure, so these tests cannot silently skip here.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install deps, pytest and the cns extra
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+          pip install -r requirements-cns.txt
+      - name: Test with CNS present
+        env:
+          GSA_REQUIRE_CNS: "1"
+        run: pytest -q -rs test_gsa_gateway.py test_policy_seam.py test_hardening.py test_secret_key.py test_cns_connector.py test_cns_independence.py
   docker:
     runs-on: ubuntu-latest
     needs: test
