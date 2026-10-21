@@ -259,7 +259,7 @@ GitHub Actions pipeline included (`.github/workflows/ci.yml`):
 
 ## Optional CNS connection
 
-GSA does not need CNS. It has no runtime dependency, nothing in the live modules imports CNS, and `test_cns_independence.py` checks this with CNS blocked (the preserved `archive/` is left untouched and is not scanned; one file there imports `cns.governance` by design). `gsa_cns_connector.py` is the one place that knows CNS exists. Install it with `pip install -r requirements-cns.txt` (pins CNS v1.8.0); without CNS, asking for a digest raises `CnsNotInstalled` and nothing else changes.
+GSA does not need CNS. It has no runtime dependency, nothing in the live modules imports CNS, and `test_cns_independence.py` checks this with CNS blocked (the preserved `archive/` is left untouched and is not scanned; one file there imports `cns.governance` by design). `gsa_cns_connector.py` is the one place that knows CNS exists. Install it with `pip install -r requirements-cns.txt` (pins CNS v1.9.0); without CNS, asking for a digest raises `CnsNotInstalled` and nothing else changes.
 
 It makes two outputs **bindable** with `cns.gate`: a gateway decision (a `TraceBundle`, or the dict the audit store keeps for it: tenant, request hash, risk assessment, outcome with its attestation, and the audit record) and an `AuditRecord`. A CNS verdict then carries a `subject_digest`, and `binds(result, trace)` says whether that verdict was issued against exactly this decision. Latency and gateway health are left out as volatile.
 
