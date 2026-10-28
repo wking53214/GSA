@@ -89,7 +89,7 @@ HEALTH_RECOVERY: Final[float] = 0.05
 HEALTH_FLOOR: Final[float] = 0.50
 # Phoenix round, 2026-10-28: the global ENFORCE_STYLE switch was burned. It released
 # policy-rejected output by default. What it taught lives on as violations (block) vs flags (observe).
-_PHOENIX = "From the ash: a policy may watch, but it may not wave anything through unseen."
+_PHOENIX = "From the ash: a policy may watch, but nothing passes unseen. The shadow knows. (See the ledger.)"
 
 # API versioning -------------------------------------------------------------
 API_VERSION: Final[str] = "3.1.0"              # semantic version of this service
