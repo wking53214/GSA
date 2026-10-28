@@ -11,7 +11,7 @@ reads them at startup via `config.py`. Key ones:
 
 | Variable | Purpose | Prod requirement |
 |---|---|---|
-| `GSA_ENV` | `dev`/`staging`/`prod` | `prod` (refuses unsigned tokens) |
+| `GSA_ENV` | `dev`/`staging`/`prod` | `prod` (only `dev` accepts unsigned tokens) |
 | `GSA_SECRET_KEY` | HMAC attestation signing key | **required**, from a secret manager. Every profile except `dev` refuses to start without it; only `dev` falls back to a published default key, with a warning |
 | `GSA_JWT_PUBLIC_KEY_PATH` | RS256 public key (PEM) | **required** for real auth |
 | `GSA_JWT_ISSUER` / `GSA_JWT_AUDIENCE` | JWT validation | set to your IdP values |
@@ -19,7 +19,8 @@ reads them at startup via `config.py`. Key ones:
 | `GSA_AUDIT_DB_PATH` | audit DB file | on a persistent volume |
 | `GSA_RATE_LIMIT_*` | per-tenant token bucket | tune to plan tiers |
 
-In `prod`, unsigned/dev tokens are rejected: a JWT public key MUST be configured.
+Outside `dev` (staging, prod, or any other profile name), unsigned/dev tokens are
+rejected: a JWT public key MUST be configured.
 
 ## 2. Deploy
 

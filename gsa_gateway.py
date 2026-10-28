@@ -137,7 +137,9 @@ def _build_authenticator() -> TenantAuthenticator:
         issuer=settings.jwt_issuer,
         audience=settings.jwt_audience,
         tenant_claim=settings.jwt_tenant_claim,
-        allow_dev_fallback=(settings.env != "prod"),  # prod refuses unsigned tokens
+        # Only the dev profile accepts unsigned tokens. An unrecognised profile name is not "dev", so a typo in
+        # the profile cannot switch the guard off (mirrors the dev-key guard in _build_secret_provider).
+        allow_dev_fallback=(settings.env == "dev"),
     )
 
 
@@ -404,15 +406,21 @@ class AuditLedger:
                            ledger_index=idx, payload_hash=payload_hash,
                            policy_name=policy_name, policy_version=policy_version)
 
-    def verify_chain(self) -> bool:
-        for i in range(1, len(self.chain)):
-            prev, cur = self.chain[i - 1], self.chain[i]
-            if cur["previous_hash"] != prev["hash"]:
+    def verify_chain(self, expected_head: Optional[str] = None) -> bool:
+        """True when the chain starts at genesis, every block (genesis included) hashes to its stored hash,
+        indices are contiguous and each block links to the previous hash. A truncated tail keeps those
+        properties, so callers that hold the stored head hash pass it as expected_head to anchor the end."""
+        if not self.chain or self.chain[0]["index"] != 1 or self.chain[0]["previous_hash"] != "0":
+            return False                               # the chain must start at genesis
+        for i in range(len(self.chain)):
+            cur = self.chain[i]
+            if i and (cur["previous_hash"] != self.chain[i - 1]["hash"]
+                      or cur["index"] != self.chain[i - 1]["index"] + 1):
                 return False
             recomputed = {k: cur[k] for k in ("index", "timestamp", "record", "previous_hash")}
             if hashlib.sha256(_canonical(recomputed).encode()).hexdigest() != cur["hash"]:
                 return False
-        return True
+        return expected_head is None or self.chain[-1]["hash"] == expected_head
 
 
 def _canonical(block: Dict[str, Any]) -> str:
@@ -688,6 +696,7 @@ class Gateway:
         self.health_engine = GatewayHealthEngine(backlog_capacity=ATTESTATION_QUEUE_SIZE)  # URE regime engine
         self._traces: Dict[str, TraceBundle] = {}
         self._traces_lock = asyncio.Lock()
+        self._adjudicated: Set[str] = set()           # trace ids that already supplied feedback
         # rolling windows for responsive operational signals
         self._recent: Deque[Tuple[bool, int]] = deque(maxlen=100)
         self._latencies: Deque[float] = deque(maxlen=200)
@@ -815,6 +824,9 @@ class Gateway:
             r = rec["bundle"]["risk"]
             blocked, hard, members = r["blocked"], r.get("hard_block", False), list(r.get("contributing_members", []))
 
+        if trace_id in self._adjudicated:              # one verdict per trace: repeats cannot pump the threshold
+            return True
+        self._adjudicated.add(trace_id)
         if members:                                    # composite: attribute to the responsible members
             for name in members:
                 await self.scanner.member_controller(name).record_feedback(True, was_actually_risky)
@@ -910,7 +922,8 @@ app.add_middleware(TraceHeaderMiddleware)
 async def verify_tenant(credentials: HTTPAuthorizationCredentials = Security(security_bearer)) -> str:
     """Resolve the bearer token to a tenant id. RS256 JWT when a public key is
     configured (signature + expiry + issuer + audience checked); a labelled dev
-    fallback otherwise (refused entirely when GSA_ENV=prod)."""
+    fallback otherwise, accepted only when GSA_ENV=dev (every other profile,
+    staging and prod included, refuses unsigned tokens)."""
     try:
         return AUTHENTICATOR.authenticate(credentials.credentials)
     except AuthError as e:
@@ -977,7 +990,7 @@ async def metrics():
 @app.post("/api/v3/evaluate")
 async def evaluate(payload: EvaluationRequest, tenant_id: str = Depends(authed_tenant)):
     bundle = await gateway.process(payload.request_text, tenant_id=tenant_id, compute_load=payload.compute_load)
-    status_label = {403: "BLOCKED", 503: "UPSTREAM_UNAVAILABLE"}.get(bundle.outcome.status, "OK")
+    status_label = {403: "BLOCKED", 502: "UPSTREAM_ERROR", 503: "UPSTREAM_UNAVAILABLE"}.get(bundle.outcome.status, "OK")
     return {
         "trace_id": bundle.trace_id,
         "tenant_id": tenant_id,
