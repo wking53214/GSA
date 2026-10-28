@@ -87,3 +87,58 @@ def test_truncated_chain_does_not_verify():
         finally:
             await g.stop()
     run(_t())
+
+
+# An output the policy rejects on every attempt is blocked (403, no text), not released with a flag
+def test_rejected_output_is_not_released_after_retries():
+    class RejectAll(G.BaselinePolicy):
+        name = "reject-all"
+
+        def inspect_output(self, text, ctx=None):
+            return G.OutputVerdict(acceptable=False, violations=["unsafe content"], flags={"unsafe": True})
+
+    async def _t():
+        g = Gateway(mock_inference_gateway, policy=RejectAll())
+        g.pipeline.enforce_style = True
+        saved = G.gateway
+        G.gateway = g
+        await g.start()
+        try:
+            body = await G.evaluate(
+                payload=G.EvaluationRequest(request_text="Generate a compliant status report metrics profile."),
+                tenant_id="t_rej")
+            assert body["status"] == "BLOCKED"
+            assert body["response"] is None
+            assert body["attestation"] is None
+            assert body["style"] == {"unsafe": True}
+            b = await g.get_trace(body["trace_id"])
+            assert b.outcome.response is None
+            assert b.outcome.status == 403
+            assert b.outcome.attempts == G.MAX_CORRECTION_ATTEMPTS
+            assert "not satisfied" in b.outcome.note
+            assert b.audit.ledger_index == len(g.ledger.chain) and g.ledger.verify_chain()
+        finally:
+            G.gateway = saved
+            await g.stop()
+    run(_t())
+
+
+# The default (advisory) path is unchanged: with enforce_style off a rejecting policy still releases the text
+def test_advisory_default_still_releases_rejected_output():
+    class RejectAll(G.BaselinePolicy):
+        name = "reject-all"
+
+        def inspect_output(self, text, ctx=None):
+            return G.OutputVerdict(acceptable=False, violations=["unsafe content"], flags={})
+
+    async def _t():
+        g = Gateway(mock_inference_gateway, policy=RejectAll())
+        assert g.pipeline.enforce_style is False
+        await g.start()
+        try:
+            b = await g.process("Generate a compliant status report metrics profile.", tenant_id="t_adv")
+            assert b.outcome.status == 200 and b.outcome.response
+            assert b.outcome.style_enforced is False
+        finally:
+            await g.stop()
+    run(_t())
