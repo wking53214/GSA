@@ -39,3 +39,14 @@ def test_evaluate_labels_upstream_error_not_ok():
             G.gateway.generator = saved
             await G.gateway.stop()
     run(_t())
+
+
+# Step 2: only the dev profile may accept unsigned bearer tokens; a typo in the profile is not dev
+@pytest.mark.parametrize("profile", ["staging", "production", "Prod", "test", ""])
+def test_only_dev_profile_allows_dev_bearer_fallback(tmp_path, profile):
+    clean = {k: v for k, v in os.environ.items() if not k.startswith("GSA_")}
+    clean.update(GSA_ENV=profile, GSA_SECRET_KEY="a-real-secret", GSA_AUDIT_DB_PATH=str(tmp_path / "a.db"))
+    code = "import gsa_gateway as g; print(g.AUTHENTICATOR.allow_dev_fallback)"
+    done = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=clean, capture_output=True, text=True, timeout=120)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "False"
