@@ -14,8 +14,10 @@ defects out by construction:
       are fine; no unbounded global dedup set, no cross-request false blocks).
     * Self-healing, clamped substrate health (no irreversible global lockout).
     * Graceful degradation: the correction loop never raises into the request
-      path and never dead-ends; on exhaustion it returns the best candidate
-      flagged, never a 5xx.
+      path and never returns a 5xx. When style is enforced and the output
+      policy rejects every retry, the output is blocked, not released: a 403
+      with no response text, recorded in the audit ledger. With style advisory
+      (the default) the last candidate is still returned, flagged.
     * Async attestation worker pool with bounded queue + backpressure (HMAC
       signing off the hot path).
     * Honest gateway-health scorer: the analytics engine is fed REAL gateway
