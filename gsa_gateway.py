@@ -406,15 +406,21 @@ class AuditLedger:
                            ledger_index=idx, payload_hash=payload_hash,
                            policy_name=policy_name, policy_version=policy_version)
 
-    def verify_chain(self) -> bool:
-        for i in range(1, len(self.chain)):
-            prev, cur = self.chain[i - 1], self.chain[i]
-            if cur["previous_hash"] != prev["hash"]:
+    def verify_chain(self, expected_head: Optional[str] = None) -> bool:
+        """True when the chain starts at genesis, every block (genesis included) hashes to its stored hash,
+        indices are contiguous and each block links to the previous hash. A truncated tail keeps those
+        properties, so callers that hold the stored head hash pass it as expected_head to anchor the end."""
+        if not self.chain or self.chain[0]["index"] != 1 or self.chain[0]["previous_hash"] != "0":
+            return False                               # the chain must start at genesis
+        for i in range(len(self.chain)):
+            cur = self.chain[i]
+            if i and (cur["previous_hash"] != self.chain[i - 1]["hash"]
+                      or cur["index"] != self.chain[i - 1]["index"] + 1):
                 return False
             recomputed = {k: cur[k] for k in ("index", "timestamp", "record", "previous_hash")}
             if hashlib.sha256(_canonical(recomputed).encode()).hexdigest() != cur["hash"]:
                 return False
-        return True
+        return expected_head is None or self.chain[-1]["hash"] == expected_head
 
 
 def _canonical(block: Dict[str, Any]) -> str:

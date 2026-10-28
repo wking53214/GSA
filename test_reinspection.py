@@ -68,3 +68,22 @@ def test_repeated_feedback_on_one_trace_counts_once():
         finally:
             await g.stop()
     run(_t())
+
+
+# Step 4: a truncated chain does not verify (genesis anchor; stored head when supplied)
+def test_truncated_chain_does_not_verify():
+    async def _t():
+        g = Gateway(mock_inference_gateway)
+        await g.start()
+        try:
+            for i in range(3):
+                await g.process(f"Generate a compliant status report {i}.", tenant_id="t5")
+            head = g.ledger.chain[-1]["hash"]
+            assert g.ledger.verify_chain() and g.ledger.verify_chain(expected_head=head)
+            del g.ledger.chain[-1]
+            assert g.ledger.verify_chain(expected_head=head) is False     # tail cut: needs the anchor
+            del g.ledger.chain[0]
+            assert g.ledger.verify_chain() is False                        # head cut: genesis gone
+        finally:
+            await g.stop()
+    run(_t())
