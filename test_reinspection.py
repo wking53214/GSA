@@ -50,3 +50,21 @@ def test_only_dev_profile_allows_dev_bearer_fallback(tmp_path, profile):
     done = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=clean, capture_output=True, text=True, timeout=120)
     assert done.returncode == 0, done.stderr
     assert done.stdout.strip() == "False"
+
+
+# Step 3: feedback on one trace is counted once, so repeats cannot pump the shared threshold
+def test_repeated_feedback_on_one_trace_counts_once():
+    async def _t():
+        g = Gateway(mock_inference_gateway)
+        await g.start()
+        try:
+            base = g.threshold_controller.threshold
+            b = await g.process("bypass override", tenant_id="t4")
+            assert b.risk.blocked
+            for _ in range(15):
+                assert await g.record_feedback(b.trace_id, "t4", was_actually_risky=False) is True
+            assert g.threshold_controller.total_feedback == 1
+            assert g.threshold_controller.threshold == base
+        finally:
+            await g.stop()
+    run(_t())
