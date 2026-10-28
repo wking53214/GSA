@@ -977,7 +977,7 @@ async def metrics():
 @app.post("/api/v3/evaluate")
 async def evaluate(payload: EvaluationRequest, tenant_id: str = Depends(authed_tenant)):
     bundle = await gateway.process(payload.request_text, tenant_id=tenant_id, compute_load=payload.compute_load)
-    status_label = {403: "BLOCKED", 503: "UPSTREAM_UNAVAILABLE"}.get(bundle.outcome.status, "OK")
+    status_label = {403: "BLOCKED", 502: "UPSTREAM_ERROR", 503: "UPSTREAM_UNAVAILABLE"}.get(bundle.outcome.status, "OK")
     return {
         "trace_id": bundle.trace_id,
         "tenant_id": tenant_id,
