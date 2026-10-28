@@ -690,6 +690,7 @@ class Gateway:
         self.health_engine = GatewayHealthEngine(backlog_capacity=ATTESTATION_QUEUE_SIZE)  # URE regime engine
         self._traces: Dict[str, TraceBundle] = {}
         self._traces_lock = asyncio.Lock()
+        self._adjudicated: Set[str] = set()           # trace ids that already supplied feedback
         # rolling windows for responsive operational signals
         self._recent: Deque[Tuple[bool, int]] = deque(maxlen=100)
         self._latencies: Deque[float] = deque(maxlen=200)
@@ -817,6 +818,9 @@ class Gateway:
             r = rec["bundle"]["risk"]
             blocked, hard, members = r["blocked"], r.get("hard_block", False), list(r.get("contributing_members", []))
 
+        if trace_id in self._adjudicated:              # one verdict per trace: repeats cannot pump the threshold
+            return True
+        self._adjudicated.add(trace_id)
         if members:                                    # composite: attribute to the responsible members
             for name in members:
                 await self.scanner.member_controller(name).record_feedback(True, was_actually_risky)
