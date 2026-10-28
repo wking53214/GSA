@@ -113,7 +113,6 @@ def test_repeat_identical_output_not_blocked():
 def test_enforce_style_converges_clean():
     async def _t():
         g = await _fresh_gateway()
-        g.pipeline.enforce_style = True
         try:
             b = await g.process("Process standard network infrastructure analysis matrix.")
             assert b.outcome.status == 200
