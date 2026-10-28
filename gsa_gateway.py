@@ -137,7 +137,9 @@ def _build_authenticator() -> TenantAuthenticator:
         issuer=settings.jwt_issuer,
         audience=settings.jwt_audience,
         tenant_claim=settings.jwt_tenant_claim,
-        allow_dev_fallback=(settings.env != "prod"),  # prod refuses unsigned tokens
+        # Only the dev profile accepts unsigned tokens. An unrecognised profile name is not "dev", so a typo in
+        # the profile cannot switch the guard off (mirrors the dev-key guard in _build_secret_provider).
+        allow_dev_fallback=(settings.env == "dev"),
     )
 
 
@@ -910,7 +912,8 @@ app.add_middleware(TraceHeaderMiddleware)
 async def verify_tenant(credentials: HTTPAuthorizationCredentials = Security(security_bearer)) -> str:
     """Resolve the bearer token to a tenant id. RS256 JWT when a public key is
     configured (signature + expiry + issuer + audience checked); a labelled dev
-    fallback otherwise (refused entirely when GSA_ENV=prod)."""
+    fallback otherwise, accepted only when GSA_ENV=dev (every other profile,
+    staging and prod included, refuses unsigned tokens)."""
     try:
         return AUTHENTICATOR.authenticate(credentials.credentials)
     except AuthError as e:
