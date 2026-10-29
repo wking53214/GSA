@@ -23,13 +23,32 @@ from policy_api import BasePolicy, InputVerdict, OutputVerdict, PolicyContext
 # ===========================================================================
 # 1) Baseline generic policy (the rules formerly hard-coded in the gateway)
 # ===========================================================================
-_RISK_TOKENS = {"bypass", "override", "jailbreak", "exploit", "malware", "ransomware"}
-
+# Phoenix round 2026-10-28: the single-word risk list (bypass, override, exploit, malware, ...) was burned. It
+# blocked 10 of 10 benign prompts that merely used those words (coding, security education) and earned one
+# catch. Vocabulary alone never scores here; see PHOENIX_ROUND_BASELINE_POLICY_2026-10-28.md for the evidence.
 _INJECTION_PATTERNS = [
     re.compile(r"ignore (all |the |your )?(previous|prior|above) (instructions|prompts?)", re.IGNORECASE),
     re.compile(r"disregard (all |the |your )?(previous|prior|above)", re.IGNORECASE),
-    re.compile(r"(reveal|print|show|leak) (your |the )?(system prompt|instructions|api[_ ]?key|secret)", re.IGNORECASE),
-    re.compile(r"you are now (a|an|in)\b", re.IGNORECASE),
+    # The leak pattern asks for the model's own prompt. The older form also matched "show the instructions"
+    # for an unrelated task, so it now needs your/the system/hidden/secret/initial/original.
+    re.compile(r"\b(reveal|print|show|leak|repeat|tell me)\b (me )?(your|the (hidden|secret|initial|original|system))"
+               r"\s+(system\s+)?(prompt|instructions|api[_ ]?key|secret)", re.IGNORECASE),
+    re.compile(r"\byou are now (a|an|in)\b", re.IGNORECASE),
+    re.compile(r"\bDAN mode\b", re.IGNORECASE),
+    re.compile(r"\boverride (your|the model's|all) (content polic\w+|safety( rules| filters| guidelines)?|"
+               r"instructions|rules|guidelines)\b", re.IGNORECASE),
+]
+
+# One narrow rule: a build verb, a malware artifact, and a harm-context cue in the same sentence. A bare
+# "write a story about ransomware" or "keylogger detection checklist" has no cue and passes.
+_HARM_CUE = (r"(victim|steal|stole|demand|ransom|bitcoin|crypto|pays? me|spreads?|propagat|undetect|hides? from|"
+             r"neighbou?r|stranger|ex's|coworker|without (them|their|his|her|the owner|consent|permission)|"
+             r"every file|all (documents|files)|passwords?|silently|company network)")
+_BUILD_VERB = r"(write|create|build|make|generate|develop|code|craft)"
+_ARTIFACT = r"(ransomware|malware|keylogger|backdoor|rootkit|trojan|exploit)"
+_HARMFUL_BUILD = [
+    re.compile(rf"\b{_BUILD_VERB}\b[^.?!]{{0,80}}\b{_ARTIFACT}\b[^.?!]*\b{_HARM_CUE}", re.IGNORECASE),
+    re.compile(rf"\b{_BUILD_VERB}\b[^.?!]{{0,80}}\b{_HARM_CUE}[^.?!]*\b{_ARTIFACT}\b", re.IGNORECASE),
 ]
 
 _STYLE_RX = {
@@ -61,18 +80,16 @@ class BaselinePolicy(BasePolicy):
 
         score = 0.0
         reasons: List[str] = []
-        tokens = {t.strip(".,;:!?\"'").lower() for t in request.split()}
-
-        risky = sorted(tokens & _RISK_TOKENS)
-        if risky:
-            score = max(score, 0.95)
-            reasons.append(f"risk tokens: {', '.join(risky)}")
 
         for pat in _INJECTION_PATTERNS:
             if pat.search(request):
                 score = max(score, 0.95)
                 reasons.append("prompt-injection pattern")
                 break
+
+        if any(pat.search(request) for pat in _HARMFUL_BUILD):
+            score = max(score, 0.95)
+            reasons.append("harmful-build request")
 
         if len(request) > _MAX_REQUEST_CHARS:
             score = max(score, 0.85)
