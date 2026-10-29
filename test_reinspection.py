@@ -99,7 +99,6 @@ def test_rejected_output_is_not_released_after_retries():
 
     async def _t():
         g = Gateway(mock_inference_gateway, policy=RejectAll())
-        g.pipeline.enforce_style = True
         saved = G.gateway
         G.gateway = g
         await g.start()
@@ -123,8 +122,8 @@ def test_rejected_output_is_not_released_after_retries():
     run(_t())
 
 
-# The default (advisory) path is unchanged: with enforce_style off a rejecting policy still releases the text
-def test_advisory_default_still_releases_rejected_output():
+# Default path: a rejecting policy blocks. There is no advisory off position (Phoenix round, 2026-10-28)
+def test_default_path_blocks_rejected_output():
     class RejectAll(G.BaselinePolicy):
         name = "reject-all"
 
@@ -133,12 +132,59 @@ def test_advisory_default_still_releases_rejected_output():
 
     async def _t():
         g = Gateway(mock_inference_gateway, policy=RejectAll())
-        assert g.pipeline.enforce_style is False
+        assert not hasattr(g.pipeline, "enforce_style")
         await g.start()
         try:
-            b = await g.process("Generate a compliant status report metrics profile.", tenant_id="t_adv")
-            assert b.outcome.status == 200 and b.outcome.response
-            assert b.outcome.style_enforced is False
+            b = await g.process("Generate a compliant status report metrics profile.", tenant_id="t_def")
+            assert b.outcome.status == 403 and b.outcome.response is None
         finally:
             await g.stop()
     run(_t())
+
+
+# Shadow policy: never blocks, but each would-be block is hashed into the ledger payload
+def test_shadow_policy_releases_and_records_would_have_blocked():
+    class ShadowReject(G.BaselinePolicy):
+        name = "shadow-reject"
+        shadow = True
+
+        def inspect_output(self, text, ctx=None):
+            return G.OutputVerdict(acceptable=False, violations=["unsafe content"], flags={})
+
+    async def _run(policy):
+        g = Gateway(mock_inference_gateway, policy=policy)
+        await g.start()
+        try:
+            return await g.process("Generate a compliant status report metrics profile.", tenant_id="t_sh")
+        finally:
+            await g.stop()
+
+    b = run(_run(ShadowReject()))
+    assert b.outcome.status == 200 and b.outcome.response
+    assert b.outcome.note.startswith("shadow: output policy would have blocked")
+    assert "unsafe content" in b.outcome.note
+
+
+# A shadow decision changes the ledger payload hash; a clean shadow-policy output does not
+def test_shadow_decision_is_hashed_and_clean_output_is_unchanged():
+    class ShadowBase(G.BaselinePolicy):
+        name = "shadow-base"
+        shadow = True
+
+    class ShadowReject(ShadowBase):
+        def inspect_output(self, text, ctx=None):
+            return G.OutputVerdict(acceptable=False, violations=["unsafe content"], flags={})
+
+    async def _hash(policy):
+        g = Gateway(mock_inference_gateway, policy=policy)
+        await g.start()
+        try:
+            b = await g.process("Generate a compliant status report metrics profile.", tenant_id="t_h")
+            return b.audit.payload_hash, b.outcome.note
+        finally:
+            await g.stop()
+
+    clean_hash, clean_note = run(_hash(ShadowBase()))
+    rej_hash, rej_note = run(_hash(ShadowReject()))
+    assert clean_note == "" and rej_note.startswith("shadow:")
+    assert clean_hash != rej_hash

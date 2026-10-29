@@ -55,7 +55,7 @@ class OutputVerdict:
     """A policy's read on generated output. Measurement only — never a rewrite.
 
     acceptable: may this output be returned as-is?
-    violations: named, blocking problems (drive the correction loop when enforced).
+    violations: named, blocking problems (drive the correction loop; still failing after retries = blocked).
     flags:      structured, non-blocking observations, persisted in the trace.
     """
     acceptable: bool = True
@@ -80,6 +80,8 @@ class PolicyAdapter(Protocol):
     name: str
     version: str
     domain: str
+    # Optional: set `shadow = True` to trial a rule. A shadow policy never blocks output; what it would have
+    # blocked is written into the audit ledger. Absent means False. Never the default.
 
     def assess_input(self, request: str, context: PolicyContext) -> InputVerdict: ...
     def inspect_output(self, response: str, context: PolicyContext) -> OutputVerdict: ...
@@ -92,6 +94,7 @@ class BasePolicy(ABC):
     name: str = "unnamed-policy"
     version: str = "0.0.0"
     domain: str = "generic"
+    shadow: bool = False
 
     def assess_input(self, request: str, context: PolicyContext) -> InputVerdict:
         return InputVerdict(score=0.0)
