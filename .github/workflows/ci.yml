@@ -17,7 +17,7 @@ jobs:
       - name: Lint
         run: ruff check . || true
       - name: Test
-        run: pytest -q test_gsa_gateway.py test_policy_seam.py test_hardening.py test_secret_key.py test_cns_connector.py test_cns_independence.py test_reinspection.py
+        run: pytest -q test_gsa_gateway.py test_policy_seam.py test_hardening.py test_secret_key.py test_cns_connector.py test_cns_independence.py test_reinspection.py test_baseline_policy.py
       - name: Self-test + engine calibration
         run: |
           python gsa_gateway.py
@@ -39,7 +39,7 @@ jobs:
       - name: Test with CNS present
         env:
           GSA_REQUIRE_CNS: "1"
-        run: pytest -q -rs test_gsa_gateway.py test_policy_seam.py test_hardening.py test_secret_key.py test_cns_connector.py test_cns_independence.py test_reinspection.py
+        run: pytest -q -rs test_gsa_gateway.py test_policy_seam.py test_hardening.py test_secret_key.py test_cns_connector.py test_cns_independence.py test_reinspection.py test_baseline_policy.py
   docker:
     runs-on: ubuntu-latest
     needs: test

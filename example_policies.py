@@ -23,13 +23,32 @@ from policy_api import BasePolicy, InputVerdict, OutputVerdict, PolicyContext
 # ===========================================================================
 # 1) Baseline generic policy (the rules formerly hard-coded in the gateway)
 # ===========================================================================
-_RISK_TOKENS = {"bypass", "override", "jailbreak", "exploit", "malware", "ransomware"}
-
+# Phoenix round 2026-10-28: the single-word risk list (bypass, override, exploit, malware, ...) was burned. It
+# blocked 10 of 10 benign prompts that merely used those words (coding, security education) and earned one
+# catch. Vocabulary alone never scores here; see PHOENIX_ROUND_BASELINE_POLICY_2026-10-28.md for the evidence.
 _INJECTION_PATTERNS = [
     re.compile(r"ignore (all |the |your )?(previous|prior|above) (instructions|prompts?)", re.IGNORECASE),
     re.compile(r"disregard (all |the |your )?(previous|prior|above)", re.IGNORECASE),
-    re.compile(r"(reveal|print|show|leak) (your |the )?(system prompt|instructions|api[_ ]?key|secret)", re.IGNORECASE),
-    re.compile(r"you are now (a|an|in)\b", re.IGNORECASE),
+    # The leak pattern asks for the model's own prompt. The older form also matched "show the instructions"
+    # for an unrelated task, so it now needs your/the system/hidden/secret/initial/original.
+    re.compile(r"\b(reveal|print|show|leak|repeat|tell me)\b (me )?(your|the (hidden|secret|initial|original|system))"
+               r"\s+(system\s+)?(prompt|instructions|api[_ ]?key|secret)", re.IGNORECASE),
+    re.compile(r"\byou are now (a|an|in)\b", re.IGNORECASE),
+    re.compile(r"\bDAN mode\b", re.IGNORECASE),
+    re.compile(r"\boverride (your|the model's|all) (content polic\w+|safety( rules| filters| guidelines)?|"
+               r"instructions|rules|guidelines)\b", re.IGNORECASE),
+]
+
+# One narrow rule: a build verb, a malware artifact, and a harm-context cue in the same sentence. A bare
+# "write a story about ransomware" or "keylogger detection checklist" has no cue and passes.
+_HARM_CUE = (r"(victim|steal|stole|demand|ransom|bitcoin|crypto|pays? me|spreads?|propagat|undetect|hides? from|"
+             r"neighbou?r|stranger|ex's|coworker|without (them|their|his|her|the owner|consent|permission)|"
+             r"every file|all (documents|files)|passwords?|silently|company network)")
+_BUILD_VERB = r"(write|create|build|make|generate|develop|code|craft)"
+_ARTIFACT = r"(ransomware|malware|keylogger|backdoor|rootkit|trojan|exploit)"
+_HARMFUL_BUILD = [
+    re.compile(rf"\b{_BUILD_VERB}\b[^.?!]{{0,80}}\b{_ARTIFACT}\b[^.?!]*\b{_HARM_CUE}", re.IGNORECASE),
+    re.compile(rf"\b{_BUILD_VERB}\b[^.?!]{{0,80}}\b{_HARM_CUE}[^.?!]*\b{_ARTIFACT}\b", re.IGNORECASE),
 ]
 
 _STYLE_RX = {
@@ -48,9 +67,10 @@ def _hits(rx: re.Pattern, text: str) -> List[str]:
 
 
 class BaselinePolicy(BasePolicy):
-    """Generic LLM-traffic hygiene. Graded risk for keywords/injection; an empty
-    request is a hard block. Output is held to a plain house style (no first
-    person, no hedging, grounded in a cause or a number) — measured, never rewritten."""
+    """Generic LLM-traffic hygiene and the reference policy for the seam. Input: an empty request is a hard
+    block; prompt-injection phrases and one narrow harmful-build rule score high; an oversize payload scores
+    high. Output: permissive. This is a tripwire, not a harm classifier: measured recall on paraphrased
+    attacks is 0 of 8 (see REALITY_CHECK.md). Writing-style rules live in HouseStylePolicy, opt-in."""
     name = "baseline"
     version = "1.0.0"
     domain = "generic"
@@ -61,12 +81,6 @@ class BaselinePolicy(BasePolicy):
 
         score = 0.0
         reasons: List[str] = []
-        tokens = {t.strip(".,;:!?\"'").lower() for t in request.split()}
-
-        risky = sorted(tokens & _RISK_TOKENS)
-        if risky:
-            score = max(score, 0.95)
-            reasons.append(f"risk tokens: {', '.join(risky)}")
 
         for pat in _INJECTION_PATTERNS:
             if pat.search(request):
@@ -74,11 +88,28 @@ class BaselinePolicy(BasePolicy):
                 reasons.append("prompt-injection pattern")
                 break
 
+        if any(pat.search(request) for pat in _HARMFUL_BUILD):
+            score = max(score, 0.95)
+            reasons.append("harmful-build request")
+
         if len(request) > _MAX_REQUEST_CHARS:
             score = max(score, 0.85)
             reasons.append("payload over size limit")
 
         return InputVerdict(score=round(score, 4), reasons=reasons)
+
+
+# ===========================================================================
+# 1b) House-style policy (opt-in). The output style rules that used to live in BaselinePolicy.
+# ===========================================================================
+class HouseStylePolicy(BasePolicy):
+    """Opt-in writing-style policy: no first person, no hedging, grounded in a cause or a number. These are
+    FORMAT rules, not safety rules, so they are not part of the default policy. Violations block after the
+    retry budget like any other policy; the abstract-verb and fluff flags are observed and never block.
+    Input is permissive. Compose it with a safety policy (CompositePolicy) when both are wanted."""
+    name = "house-style"
+    version = "1.0.0"
+    domain = "style"
 
     def inspect_output(self, response: str, context: PolicyContext) -> OutputVerdict:
         flags = {
