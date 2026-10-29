@@ -31,7 +31,7 @@ GSA (Governance Substrate Architecture) is a **universal LLM-governance control 
 
 ✅ **Adaptive threshold converges.** The FDR loop receives ground-truth feedback and tuning the threshold actually drives decisions (not ceremonial).
 
-✅ **Architecture survives real data.** Tested against 52 real jailbreaks (65% adversarial). Baseline catches 5.9% — honest gap that motivates better policies, not architectural changes.
+✅ **Architecture survives real data.** Tested against 52 real jailbreaks (65% adversarial). Baseline catches 2.9% (1 of 34) after the 2026-10-28 Phoenix round, down from 5.9% because the single-word risk list was burned for blocking ordinary prompts; it is a tripwire, not a classifier. Honest gap that motivates better policies, not architectural changes.
 
 ---
 
@@ -181,7 +181,7 @@ print(f"Recall: {100*report.recall:.1f}%")
 
 ```bash
 python validate_against_jailbreaks.py
-# BaselinePolicy vs. 52 real jailbreaks: 5.9% recall (catches 2/34)
+# BaselinePolicy vs. 52 real jailbreaks: 2.9% recall (catches 1/34); was 5.9% (2/34) before the 2026-10-28 Phoenix round
 # Shows the honest gap that motivates better policies.
 
 python fdr_convergence_on_real_data.py
@@ -271,7 +271,7 @@ This is binding only. It is not a gate, it maps nothing to a verdict, and a boun
 
 ### Immediate
 
-1. **Build a real jailbreak policy.** The baseline is weak (5.9% recall). Author a `JailbreakPolicy` with better heuristics or a trained classifier.
+1. **Build a real jailbreak policy.** The baseline is weak (2.9% recall). Author a `JailbreakPolicy` with better heuristics or a trained classifier.
 2. **Validate it locally.** Run `validate_policy(JailbreakPolicy(), jailbreak_dataset)` and get precision/recall.
 3. **Deploy and iterate.** Use the FDR loop to tune the threshold as ground-truth feedback arrives.
 
