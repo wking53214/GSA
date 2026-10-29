@@ -101,7 +101,7 @@ Policy owns: what is risky, what output is acceptable.
 1. **Input → PolicyInputGate** (assess_input) — policy scores the request; FDR threshold decides block
 2. **Block or Pass** — hard-blocks bypass threshold; graded blocks respect it
 3. **Generator** — if passed, run the LLM (with circuit-breaker protection)
-4. **Output → ResponsePipeline** (inspect_output): policy validates output; correct loop if needed. With style enforced, an output still rejected after the retries is blocked (403, no response text), not released
+4. **Output → ResponsePipeline** (inspect_output): policy validates output; correct loop if needed. An output the policy still rejects after the retries is blocked (403, no response text), not released. A policy may set `shadow = True` to trial a rule: it never blocks, and each output it would have blocked is hashed into the ledger as a shadow decision
 5. **Audit** — hash-linked chain, deterministic attestation, persistent (SQLite; Postgres is not implemented)
 6. **Health** — URE regime engine (6 regimes, Lyapunov energy, properly calibrated)
 7. **Feedback** — ground-truth labels move the adaptive threshold (FDR control)

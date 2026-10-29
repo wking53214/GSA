@@ -14,10 +14,11 @@ defects out by construction:
       are fine; no unbounded global dedup set, no cross-request false blocks).
     * Self-healing, clamped substrate health (no irreversible global lockout).
     * Graceful degradation: the correction loop never raises into the request
-      path and never returns a 5xx. When style is enforced and the output
-      policy rejects every retry, the output is blocked, not released: a 403
-      with no response text, recorded in the audit ledger. With style advisory
-      (the default) the last candidate is still returned, flagged.
+      path and never returns a 5xx. When the output policy rejects every
+      retry, the output is blocked, not released: a 403 with no response
+      text, recorded in the audit ledger. A policy may declare itself `shadow`
+      to trial a new rule: it never blocks, and every output it would have
+      blocked is written into the ledger payload as a shadow decision.
     * Async attestation worker pool with bounded queue + backpressure (HMAC
       signing off the hot path).
     * Honest gateway-health scorer: the analytics engine is fed REAL gateway
@@ -31,8 +32,7 @@ defects out by construction:
     * The risk scanner is a keyword/heuristic blocklist, and the style checks
       are FORMAT enforcement, not safety reasoning. Both expose a clean seam
       (`RiskScanner.assess`, `OutputInspector.inspect`) where a real classifier
-      or policy model drops in. Style violations are advisory by default and do
-      not block legitimate responses.
+      or policy model drops in. Output violations block; flags never do.
 """
 from __future__ import annotations
 
@@ -87,7 +87,9 @@ TARGET_THROTTLE_S: Final[float] = 0.0          # set >0 only if you actually wan
 HEALTH_DECAY: Final[float] = 0.05
 HEALTH_RECOVERY: Final[float] = 0.05
 HEALTH_FLOOR: Final[float] = 0.50
-ENFORCE_STYLE: Final[bool] = False             # advisory by default; True = retry to satisfy house style
+# Phoenix round, 2026-10-28: the global ENFORCE_STYLE switch was burned. It released
+# policy-rejected output by default. What it taught lives on as violations (block) vs flags (observe).
+_PHOENIX = "The Shadow knows..."
 
 # API versioning -------------------------------------------------------------
 API_VERSION: Final[str] = "3.1.0"              # semantic version of this service
@@ -399,6 +401,8 @@ class AuditLedger:
                      policy_name: str = "", policy_version: str = "") -> AuditRecord:
         provenance = f"{policy_name}@{policy_version}"
         payload = f"{request_text}|{risk.score}|{outcome.status}|{outcome.response or ''}|{provenance}"
+        if outcome.note.startswith("shadow:"):         # present-when-shadow: existing record hashes are unchanged
+            payload += f"|{outcome.note}"
         payload_hash = hashlib.sha256(payload.encode()).hexdigest()
         async with self._lock:
             idx = len(self.chain) + 1
@@ -598,11 +602,10 @@ _CIRCUIT_CODE = {"CLOSED": 0, "HALF_OPEN": 1, "OPEN": 2}
 # ----------------------------------------------------------------------------
 class ResponsePipeline:
     def __init__(self, attestation: AttestationService, breaker: "CircuitBreaker",
-                 policy: PolicyAdapter, enforce_style: bool = ENFORCE_STYLE):
+                 policy: PolicyAdapter):
         self.policy = policy
         self.attestation = attestation
         self.breaker = breaker
-        self.enforce_style = enforce_style
 
     async def run(self, prompt: str, generator: Callable[[str], Awaitable[str]],
                   input_risk: float) -> Tuple[ExecutionOutcome, int]:
@@ -613,6 +616,7 @@ class ResponsePipeline:
         last_text = ""
         last_verdict: Optional[OutputVerdict] = None
         attempts = 0
+        shadow = bool(getattr(self.policy, "shadow", False))
 
         for attempt in range(1, MAX_CORRECTION_ATTEMPTS + 1):
             attempts = attempt
@@ -634,11 +638,13 @@ class ResponsePipeline:
             repeated = h in seen
             seen.add(h)
 
-            accept = (verdict.acceptable or not self.enforce_style) and not repeated
+            # A shadow policy never blocks; what it would have blocked is recorded (see _shadow_note).
+            accept = (verdict.acceptable or shadow) and not repeated
 
             if accept:
                 return await self._finalize(text, verdict, attempt, input_risk, start,
-                                            style_enforced=verdict.acceptable), attempt
+                                            style_enforced=verdict.acceptable,
+                                            note=self._shadow_note(verdict, shadow)), attempt
 
             # Build a corrective instruction from the policy's named violations and retry.
             reasons = list(verdict.violations)
@@ -648,18 +654,27 @@ class ResponsePipeline:
                        f"{', '.join(reasons) or 'policy violation'}. Revise to satisfy the policy "
                        f"(e.g. remove first-person/hedging, ground claims in a cause or a number).")
 
-        # Exhausted. When style is enforced, a candidate the policy rejected is withheld, not released flagged.
-        if self.enforce_style and last_verdict is not None and not last_verdict.acceptable:
+        # Exhausted. A candidate the policy rejected is withheld, not released flagged (shadow policies excepted).
+        if not shadow and last_verdict is not None and not last_verdict.acceptable:
             outcome = ExecutionOutcome(status=403, session_id=f"GSA-{secrets.token_hex(3).upper()}",
                                        response=None, attempts=attempts, style_enforced=False,
                                        style_report=dict(last_verdict.flags), telemetry=None, attestation=None,
                                        runtime_ms=round((time.perf_counter() - start) * 1000, 3),
                                        note="blocked: output policy not satisfied after retries")
             return outcome, attempts
-        # Otherwise (an acceptable answer repeated, or style advisory): return the last candidate, flagged.
+        # Otherwise (an acceptable answer repeated, or a shadow policy): return the last candidate, flagged.
+        note = self._shadow_note(last_verdict, shadow) or "output policy not satisfied after retries"
         outcome = await self._finalize(last_text, last_verdict, attempts, input_risk, start,
-                                       style_enforced=False, note="output policy not satisfied after retries")
+                                       style_enforced=False, note=note)
         return outcome, attempts
+
+    @staticmethod
+    def _shadow_note(verdict: Optional[OutputVerdict], shadow: bool) -> str:
+        """Non-empty only when a shadow policy rejected the output. The 'shadow:' prefix is what the audit
+        ledger keys on, so a shadow decision is hashed into the chain and never passes silently."""
+        if shadow and verdict is not None and not verdict.acceptable:
+            return "shadow: output policy would have blocked: " + "; ".join(verdict.violations or ["unspecified"])
+        return ""
 
     async def _finalize(self, text: str, verdict: Optional[OutputVerdict], attempts: int,
                         input_risk: float, start: float, style_enforced: bool, note: str = "") -> ExecutionOutcome:
@@ -1093,26 +1108,24 @@ async def _self_test() -> bool:
     print(f"[6] audit chain pre={pre} post-tamper={post} -> {'PASS' if (pre and not post) else 'FAIL'}")
     ok &= pre and not post
 
-    # 7) with style enforcement ON, the correction loop converges to a clean answer
+    # 7) the correction loop converges to a clean answer (output policy always enforced)
     g_enforce = Gateway(mock_inference_gateway)
-    g_enforce.pipeline.enforce_style = True
     await g_enforce.start()
     eb = await g_enforce.process("Process standard network infrastructure analysis matrix.")
     clean = eb.outcome.status == 200 and eb.outcome.style_enforced and not eb.outcome.style_report["first_person"]
-    print(f"[7] enforce_style loop converges -> {'PASS' if clean else 'FAIL'} "
+    print(f"[7] correction loop converges -> {'PASS' if clean else 'FAIL'} "
           f"(attempts={eb.outcome.attempts}, enforced={eb.outcome.style_enforced}, "
           f"response='{(eb.outcome.response or '')[:48]}...')")
     ok &= clean
     await g_enforce.stop()
 
-    # 7) with style enforcement ON, the correction loop converges to a clean answer
+    # 7) the correction loop converges to a clean answer (output policy always enforced)
     g_enforce = Gateway(mock_inference_gateway)
-    g_enforce.pipeline.enforce_style = True
     await g_enforce.start()
     eb = await g_enforce.process("Process standard network infrastructure analysis matrix.")
     clean = (eb.outcome.status == 200 and eb.outcome.style_enforced
              and not eb.outcome.style_report["first_person"])
-    print(f"[7] enforce_style loop converges -> {'PASS' if clean else 'FAIL'} "
+    print(f"[7] correction loop converges -> {'PASS' if clean else 'FAIL'} "
           f"(attempts={eb.outcome.attempts}, enforced={eb.outcome.style_enforced}, "
           f"response='{(eb.outcome.response or '')[:48]}...')")
     ok &= clean
@@ -1207,6 +1220,8 @@ async def _self_test() -> bool:
 
     await g.stop()
     print(f"\nSELF-TEST: {'ALL PASS' if ok else 'FAILURES PRESENT'}")
+    if ok:
+        print(f"  ~ {_PHOENIX}")                      # inert: prints only here, never reachable from a request
     return ok
 
 

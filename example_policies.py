@@ -55,9 +55,6 @@ class BaselinePolicy(BasePolicy):
     version = "1.0.0"
     domain = "generic"
 
-    def __init__(self, enforce_style_default: bool = True):
-        self.enforce_style_default = enforce_style_default
-
     def assess_input(self, request: str, context: PolicyContext) -> InputVerdict:
         if not request or not request.strip():
             return InputVerdict(score=1.0, hard_block=True, reasons=["empty input"])
