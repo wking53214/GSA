@@ -132,3 +132,18 @@ This experiment proved three claims:
 The GSA gateway architecture survived first contact with reality. The baseline failed, but for the right reason: the *policy* is weak, not the *substrate*. That's the whole point of the seam — let the policy authors own the detection problem, keep the governance core simple and correct.
 
 **What's needed now is a policy author who believes in the jailbreak risk enough to build something real.**
+
+---
+
+## Addendum, 2026-10-28: Phoenix round on BaselinePolicy
+
+The original numbers above are kept as the record. A Phoenix round changed what the baseline is, and measured it:
+
+- **Burned:** the single-word risk list (bypass, override, jailbreak, exploit, malware, ransomware). On hand-written corpora it blocked 10 of 10 benign prompts that merely used those words (coding questions, security education, a medical bypass). The 18 benign prompts in the dataset above contain none of them, which is why 100% precision never showed it.
+- **Falsified:** a broader regex "intent" variant. A red-team set written after it existed showed it wrongly blocked 10 of 12 benign prompts and still caught 0 of 8 paraphrased attacks. It was not adopted.
+- **Kept:** injection phrases (leak pattern tightened: it matched "show the instructions" for a bookshelf), and one narrow rule that needs a build verb, a malware artifact and a harm cue in one sentence.
+- **Moved:** writing-style output rules now live in the opt-in `HouseStylePolicy`.
+- **Measured now:** repo dataset recall 2.9% (1 of 34), precision 100%. Hand corpora: benign passed 18 of 18 on dev and held-out (was 8 of 18), attacks blocked 6 of 8 (was 7 of 8), fresh set 6 of 6 attacks and 10 of 10 benign (written with the rules in mind, so optimistic). **Paraphrased attacks: 0 of 8 caught.** Vocabulary and phrase rules cannot see intent; this stays a recorded gap, asserted in `test_baseline_policy.py`.
+- **Limits:** one author wrote the corpora; the held-out split shares that author's mental model; samples are small.
+- **Trade made on purpose:** two blatant catches given up to stop blocking 10 of 10 legitimate prompts. Only a real classifier policy closes the gap.
+
