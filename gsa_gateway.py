@@ -703,6 +703,13 @@ class ResponsePipeline:
 class Gateway:
     def __init__(self, generator: Callable[[str], Awaitable[str]],
                  policy: Optional[PolicyAdapter] = None, store=None):
+        if policy is None:
+            # BaselinePolicy is a tripwire for prompt-injection phrases, not a harm classifier (measured recall on
+            # paraphrased attacks: 0 of 8, see REALITY_CHECK.md). A silent default reads as protection, so prod must choose.
+            if settings.env == "prod":
+                raise RuntimeError("GSA_ENV=prod requires an explicit policy=...; the default BaselinePolicy is a "
+                                   "reference tripwire, not a production policy")
+            logger.warning("no policy given: using the reference BaselinePolicy (a tripwire, not a harm classifier)")
         self.generator = generator
         self.policy = policy or BaselinePolicy()
         self._policy_lock = asyncio.Lock()
@@ -912,12 +919,15 @@ class FeedbackRequest(BaseModel):
     was_actually_risky: bool
 
 
-gateway = Gateway(mock_inference_gateway)
+gateway = Gateway(mock_inference_gateway, policy=BaselinePolicy())   # demo wiring: the reference policy, named
 security_bearer = HTTPBearer()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.env == "prod" and isinstance(gateway.policy, BaselinePolicy):
+        logger.warning("serving with the reference BaselinePolicy and the demo generator; "
+                       "embed Gateway(your_generator, policy=your_policy) for real traffic")
     await gateway.start()
     try:
         yield
