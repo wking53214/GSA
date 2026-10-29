@@ -58,7 +58,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from ure_engine import ClassificationResult, GatewayHealthEngine  # UGPIS-Ω regime engine
 from policy_api import InputVerdict, OutputVerdict, PolicyAdapter  # the policy seam
-from example_policies import BaselinePolicy                        # default policy
+from example_policies import BaselinePolicy, HouseStylePolicy      # default policy; opt-in style policy
 from policy_composition import CompositePolicy                     # multi-policy stacking
 from auth import AuthError, EnvSecretProvider, FileSecretProvider, TenantAuthenticator
 from persistence import make_store
@@ -1065,12 +1065,15 @@ async def _self_test() -> bool:
     await g.start()
     ok = True
 
-    # 1) correction loop converges to a compliant answer
-    b = await g.process("Process standard network infrastructure analysis matrix.")
-    conv = b.outcome.status == 200 and b.outcome.style_enforced is True
-    print(f"[1] correction loop converges -> {'PASS' if (b.outcome.status==200) else 'FAIL'} "
-          f"(attempts={b.outcome.attempts}, response='{b.outcome.response[:48]}...')")
-    ok &= b.outcome.status == 200
+    # 1) correction loop converges to a compliant answer (needs a policy that rejects, so house style is opted in)
+    g_style = Gateway(mock_inference_gateway, policy=HouseStylePolicy())
+    await g_style.start()
+    b = await g_style.process("Process standard network infrastructure analysis matrix.")
+    conv = b.outcome.status == 200 and b.outcome.style_enforced is True and b.outcome.attempts > 1
+    print(f"[1] correction loop converges -> {'PASS' if conv else 'FAIL'} "
+          f"(attempts={b.outcome.attempts}, response='{(b.outcome.response or '')[:48]}...')")
+    ok &= conv
+    await g_style.stop()
 
     # 2) identical valid output repeated across requests does NOT get blocked
     statuses = []
@@ -1109,7 +1112,7 @@ async def _self_test() -> bool:
     ok &= pre and not post
 
     # 7) the correction loop converges to a clean answer (output policy always enforced)
-    g_enforce = Gateway(mock_inference_gateway)
+    g_enforce = Gateway(mock_inference_gateway, policy=HouseStylePolicy())
     await g_enforce.start()
     eb = await g_enforce.process("Process standard network infrastructure analysis matrix.")
     clean = eb.outcome.status == 200 and eb.outcome.style_enforced and not eb.outcome.style_report["first_person"]
@@ -1120,7 +1123,7 @@ async def _self_test() -> bool:
     await g_enforce.stop()
 
     # 7) the correction loop converges to a clean answer (output policy always enforced)
-    g_enforce = Gateway(mock_inference_gateway)
+    g_enforce = Gateway(mock_inference_gateway, policy=HouseStylePolicy())
     await g_enforce.start()
     eb = await g_enforce.process("Process standard network infrastructure analysis matrix.")
     clean = (eb.outcome.status == 200 and eb.outcome.style_enforced

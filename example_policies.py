@@ -67,9 +67,10 @@ def _hits(rx: re.Pattern, text: str) -> List[str]:
 
 
 class BaselinePolicy(BasePolicy):
-    """Generic LLM-traffic hygiene. Graded risk for keywords/injection; an empty
-    request is a hard block. Output is held to a plain house style (no first
-    person, no hedging, grounded in a cause or a number) — measured, never rewritten."""
+    """Generic LLM-traffic hygiene and the reference policy for the seam. Input: an empty request is a hard
+    block; prompt-injection phrases and one narrow harmful-build rule score high; an oversize payload scores
+    high. Output: permissive. This is a tripwire, not a harm classifier: measured recall on paraphrased
+    attacks is 0 of 8 (see REALITY_CHECK.md). Writing-style rules live in HouseStylePolicy, opt-in."""
     name = "baseline"
     version = "1.0.0"
     domain = "generic"
@@ -96,6 +97,19 @@ class BaselinePolicy(BasePolicy):
             reasons.append("payload over size limit")
 
         return InputVerdict(score=round(score, 4), reasons=reasons)
+
+
+# ===========================================================================
+# 1b) House-style policy (opt-in). The output style rules that used to live in BaselinePolicy.
+# ===========================================================================
+class HouseStylePolicy(BasePolicy):
+    """Opt-in writing-style policy: no first person, no hedging, grounded in a cause or a number. These are
+    FORMAT rules, not safety rules, so they are not part of the default policy. Violations block after the
+    retry budget like any other policy; the abstract-verb and fluff flags are observed and never block.
+    Input is permissive. Compose it with a safety policy (CompositePolicy) when both are wanted."""
+    name = "house-style"
+    version = "1.0.0"
+    domain = "style"
 
     def inspect_output(self, response: str, context: PolicyContext) -> OutputVerdict:
         flags = {
