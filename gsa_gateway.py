@@ -14,8 +14,10 @@ defects out by construction:
       are fine; no unbounded global dedup set, no cross-request false blocks).
     * Self-healing, clamped substrate health (no irreversible global lockout).
     * Graceful degradation: the correction loop never raises into the request
-      path and never dead-ends; on exhaustion it returns the best candidate
-      flagged, never a 5xx.
+      path and never returns a 5xx. When style is enforced and the output
+      policy rejects every retry, the output is blocked, not released: a 403
+      with no response text, recorded in the audit ledger. With style advisory
+      (the default) the last candidate is still returned, flagged.
     * Async attestation worker pool with bounded queue + backpressure (HMAC
       signing off the hot path).
     * Honest gateway-health scorer: the analytics engine is fed REAL gateway
@@ -562,7 +564,7 @@ class AdaptiveThresholdController:
 # ----------------------------------------------------------------------------
 if _PROM_AVAILABLE:
     M_REQUESTS = Counter("gsa_requests_total", "Requests processed", ["status"])
-    M_BLOCKED = Counter("gsa_blocked_total", "Requests blocked at the input gate", ["reason"])
+    M_BLOCKED = Counter("gsa_blocked_total", "Requests blocked at the input gate or by the output policy", ["reason"])
     M_RATELIMITED = Counter("gsa_rate_limited_total", "Requests rejected by the rate limiter")
     M_LATENCY = Histogram("gsa_request_latency_ms", "End-to-end request latency (ms)",
                           buckets=(1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500))
@@ -646,7 +648,15 @@ class ResponsePipeline:
                        f"{', '.join(reasons) or 'policy violation'}. Revise to satisfy the policy "
                        f"(e.g. remove first-person/hedging, ground claims in a cause or a number).")
 
-        # Exhausted: never dead-end. Return the best candidate, flagged.
+        # Exhausted. When style is enforced, a candidate the policy rejected is withheld, not released flagged.
+        if self.enforce_style and last_verdict is not None and not last_verdict.acceptable:
+            outcome = ExecutionOutcome(status=403, session_id=f"GSA-{secrets.token_hex(3).upper()}",
+                                       response=None, attempts=attempts, style_enforced=False,
+                                       style_report=dict(last_verdict.flags), telemetry=None, attestation=None,
+                                       runtime_ms=round((time.perf_counter() - start) * 1000, 3),
+                                       note="blocked: output policy not satisfied after retries")
+            return outcome, attempts
+        # Otherwise (an acceptable answer repeated, or style advisory): return the last candidate, flagged.
         outcome = await self._finalize(last_text, last_verdict, attempts, input_risk, start,
                                        style_enforced=False, note="output policy not satisfied after retries")
         return outcome, attempts
@@ -743,6 +753,8 @@ class Gateway:
                                            telemetry=None, attestation=None, runtime_ms=0.0,
                                            note=f"upstream error: {type(exc).__name__}")
                 attempts = 0
+            if outcome.status == 403:                  # output policy block: counted like the input-gate blocks
+                M_BLOCKED.labels(reason="output").inc()
             if outcome.runtime_ms:
                 self._latencies.append(outcome.runtime_ms)
                 M_LATENCY.observe(outcome.runtime_ms)
