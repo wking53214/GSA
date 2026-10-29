@@ -19,7 +19,7 @@ from policy_api import (
     BasePolicy, InputVerdict, OutputVerdict, PolicyAdapter,
     InputCase, OutputCase, validate_policy,
 )
-from example_policies import BaselinePolicy, FinancialPIIPolicy, PermissivePolicy, StrictDenyPolicy
+from example_policies import BaselinePolicy, FinancialPIIPolicy, HouseStylePolicy, PermissivePolicy, StrictDenyPolicy
 
 
 def run(coro):
@@ -114,7 +114,8 @@ def test_repeat_identical_output_not_blocked():
 
 def test_enforce_style_converges_clean():
     async def _t():
-        g = await _fresh_gateway()
+        g = Gateway(mock_inference_gateway, policy=HouseStylePolicy())
+        await g.start()
         try:
             b = await g.process("Process standard network infrastructure analysis matrix.")
             assert b.outcome.status == 200
@@ -127,7 +128,7 @@ def test_enforce_style_converges_clean():
 
 def test_inspector_is_nondestructive():
     text = "This will improve patient outcomes and enable earlier sepsis alerts."
-    v = BaselinePolicy().inspect_output(text, {})
+    v = HouseStylePolicy().inspect_output(text, {})
     # flags are reported; the policy returns a verdict, never a rewritten string
     assert v.flags["abstract_verbs"] and "improve" in v.flags["abstract_verbs"]
     assert isinstance(v.acceptable, bool)
