@@ -17,7 +17,7 @@ BLOCK = "import sys; sys.modules['cns'] = None; sys.modules['cns.gate'] = None\n
 # The interpreter needs the gateway's own dependencies (fastapi and the rest), wherever the caller put them.
 ENV = {"PYTHONPATH": os.pathsep.join([str(ROOT)] + [p for p in os.environ.get("PYTHONPATH", "").split(os.pathsep) if p]),
        "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "PYTHONDONTWRITEBYTECODE": "1", "GSA_ENV": "dev"}
-PIN = "cns @ git+https://github.com/wking53214/CNS.git@v1.9.0"
+PIN = "cns @ git+https://github.com/wking53214/CNS.git@v2.3.0"
 
 
 def run(code: str, *, block: bool = True) -> subprocess.CompletedProcess:
