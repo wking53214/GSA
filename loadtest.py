@@ -6,8 +6,8 @@ Gateway and reports throughput, latency percentiles, and a status breakdown.
 This exercises the async worker pool, backpressure, rate-limited paths, the
 circuit breaker, and the URE health scorer under concurrency.
 
-Run:  python3 loadtest.py [total_requests] [concurrency]
-e.g.  python3 loadtest.py 2000 100
+Run:  GSA_ENV=dev python3 loadtest.py [total_requests] [concurrency]
+e.g.  GSA_ENV=dev python3 loadtest.py 2000 100
 """
 import asyncio
 import logging
