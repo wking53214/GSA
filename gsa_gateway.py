@@ -78,6 +78,9 @@ logger = logging.getLogger("gsa_gateway")
 from config import settings  # 12-factor settings
 from backpressure import backpressure_delay_seconds  # queue delay signal
 
+if "GSA_ENV" not in os.environ:  # unset fails closed as prod (config.py); say so before a missing key stops startup
+    logger.warning("GSA_ENV is not set, so this runs as GSA_ENV=prod; set GSA_ENV=dev explicitly for a local dev run")
+
 MAX_REQUEST_CHARS: Final[int] = settings.max_request_chars
 RISK_BLOCK_THRESHOLD: Final[float] = settings.risk_block_threshold
 MAX_CORRECTION_ATTEMPTS: Final[int] = settings.max_correction_attempts

@@ -45,6 +45,15 @@ docker compose up --build
 # Gateway on :8000, Prometheus on :9090
 ```
 
+### Local (from source)
+
+```bash
+GSA_ENV=dev uvicorn gsa_gateway:app --port 8000
+```
+
+`GSA_ENV=dev` must be set explicitly. Unset, `GSA_ENV` means `prod`, which refuses to start without a real
+`GSA_SECRET_KEY` and `GSA_AUDIT_BACKEND=sqlite`, and refuses unsigned bearer tokens.
+
 ### Production (container/k8s)
 
 1. Mount secrets: HMAC key + JWT public key
@@ -184,7 +193,7 @@ python validate_against_jailbreaks.py
 # BaselinePolicy vs. 52 real jailbreaks: 2.9% recall (catches 1/34); was 5.9% (2/34) before the 2026-10-28 Phoenix round
 # Shows the honest gap that motivates better policies.
 
-python fdr_convergence_on_real_data.py
+GSA_ENV=dev python fdr_convergence_on_real_data.py
 # Simulates 200 decisions + ground-truth feedback
 # Watches the adaptive threshold move (or not)
 ```
@@ -198,7 +207,7 @@ See `REALITY_CHECK.md` for the full first-contact report.
 All operational knobs are environment variables (see `.env.example`):
 
 ```bash
-GSA_ENV=prod                          # dev|staging|prod (only dev accepts unsigned tokens)
+GSA_ENV=prod                          # dev|staging|prod (only dev accepts unsigned tokens; unset means prod)
 GSA_SECRET_KEY=<your-hmac-key>        # from a secret manager; required unless GSA_ENV=dev (startup is refused without it)
 GSA_JWT_PUBLIC_KEY_PATH=/path/to/pub  # RS256 verification (required for prod)
 GSA_AUDIT_BACKEND=sqlite              # memory|sqlite

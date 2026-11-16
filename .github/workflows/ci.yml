@@ -19,6 +19,8 @@ jobs:
       - name: Test
         run: pytest -q test_gsa_gateway.py test_policy_seam.py test_hardening.py test_secret_key.py test_cns_connector.py test_cns_independence.py test_reinspection.py test_baseline_policy.py
       - name: Self-test + engine calibration
+        env:
+          GSA_ENV: dev   # the demo self-test uses the dev key; an unset GSA_ENV means prod and refuses it
         run: |
           python gsa_gateway.py
           python ure_engine.py
