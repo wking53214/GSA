@@ -40,7 +40,9 @@ def _env_bool(name: str, default: bool) -> bool:
 @dataclass(frozen=True)
 class Settings:
     # --- service ---
-    env: str = field(default_factory=lambda: _env("GSA_ENV", "dev"))
+    # Unset means prod, so a forgotten variable fails closed: a real key, signed tokens and the sqlite audit log are
+    # required. The published default key and unsigned tokens need an explicit GSA_ENV=dev.
+    env: str = field(default_factory=lambda: _env("GSA_ENV", "prod"))
     log_level: str = field(default_factory=lambda: _env("GSA_LOG_LEVEL", "INFO"))
 
     # --- request limits ---

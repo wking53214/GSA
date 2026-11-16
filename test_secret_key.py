@@ -128,3 +128,33 @@ def test_the_service_starts_in_prod_with_a_key_and_signs_with_it(tmp_path):
     assert done.returncode == 0, done.stderr
     assert done.stdout.strip() == "True"
     assert SECRET not in done.stderr
+
+
+# An unset GSA_ENV used to mean dev: the published key, unsigned tokens and an in-memory audit log. It now means prod.
+def test_an_unset_profile_is_prod_and_refuses_the_default_key(monkeypatch):
+    settings = _settings(monkeypatch)
+    assert settings.env == "prod"
+    with pytest.raises(MissingSecretError):
+        _key(settings)
+
+
+def test_the_service_refuses_to_start_with_gsa_env_unset_and_says_why(tmp_path):
+    done = _import_gateway(tmp_path)
+    assert done.returncode != 0 and "MissingSecretError" in done.stderr
+    assert "GSA_ENV is not set" in done.stderr
+
+
+def test_with_gsa_env_unset_a_key_alone_is_not_enough(tmp_path):
+    done = _import_gateway(tmp_path, GSA_SECRET_KEY=SECRET)
+    assert done.returncode != 0 and "GSA_AUDIT_BACKEND=sqlite" in done.stderr
+    assert SECRET not in done.stderr
+
+
+def test_with_gsa_env_unset_unsigned_tokens_are_refused(tmp_path):
+    clean = {k: v for k, v in os.environ.items() if not k.startswith("GSA_")}
+    clean.update(GSA_SECRET_KEY=SECRET, GSA_AUDIT_BACKEND="sqlite", GSA_AUDIT_DB_PATH=str(tmp_path / "audit.db"))
+    code = "import gsa_gateway as g; print(g.settings.env, g.AUTHENTICATOR.allow_dev_fallback)"
+    done = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=clean, capture_output=True, text=True,
+                          timeout=120, check=False)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "prod False"
