@@ -1029,7 +1029,9 @@ async def metrics():
 
 @app.post("/api/v3/evaluate")
 async def evaluate(payload: EvaluationRequest, tenant_id: str = Depends(authed_tenant)):
-    bundle = await gateway.process(payload.request_text, tenant_id=tenant_id, compute_load=payload.compute_load)
+    # The client's compute_load is accepted for compatibility and ignored: it drives one health value shared by every
+    # tenant, so trusting it let any caller lock all tenants out. In-process callers of Gateway.process may still pass it.
+    bundle = await gateway.process(payload.request_text, tenant_id=tenant_id)
     status_label = {403: "BLOCKED", 502: "UPSTREAM_ERROR", 503: "UPSTREAM_UNAVAILABLE"}.get(bundle.outcome.status, "OK")
     return {
         "trace_id": bundle.trace_id,
