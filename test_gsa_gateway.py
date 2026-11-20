@@ -462,6 +462,23 @@ def test_evaluate_endpoint_returns_attestation_and_health():
     run(_t())
 
 
+def test_one_tenants_reported_load_cannot_block_another_tenant():
+    """The endpoint ignores the client's compute_load: 30 heavy-load requests from tenant A leave tenant B served."""
+    async def _t():
+        await G.gateway.start()
+        try:
+            heavy = G.EvaluationRequest(request_text="Generate a compliant status report metrics profile.", compute_load=1.0)
+            for _ in range(30):
+                await G.evaluate(payload=heavy, tenant_id="tenant_A")
+            assert await G.gateway.substrate.health() == 1.0
+            ordinary = G.EvaluationRequest(request_text="Generate a compliant status report metrics profile.")
+            body = await G.evaluate(payload=ordinary, tenant_id="tenant_B")
+            assert body["status"] == "OK", body["note"]
+        finally:
+            await G.gateway.stop()
+    run(_t())
+
+
 def test_evaluate_endpoint_blocks_injection():
     async def _t():
         await G.gateway.start()
