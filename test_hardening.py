@@ -52,7 +52,9 @@ def test_jwt_auth_accepts_valid_and_rejects_bad():
     with pytest.raises(AuthError):
         auth.authenticate(expired)
     with pytest.raises(AuthError):
-        auth.authenticate(good[:-3] + "AAA")          # tampered signature
+        head, payload, sig = good.split(".")
+        flipped = ("B" if sig[0] == "A" else "A") + sig[1:]   # always changes the signature (the last chars can already be "AAA")
+        auth.authenticate(f"{head}.{payload}.{flipped}")      # tampered signature
     # wrong key entirely
     _, other_pub = _keypair()
     auth2 = TenantAuthenticator(public_key_pem=other_pub, audience="gw")
